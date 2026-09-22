@@ -1,0 +1,726 @@
+/* ============================================================
+   NTPSense App Shell - header/sidebar/footer tetap diam, cuma area
+   konten (dan, di dalam itu, area di bawah tab) yang scroll. Dipisah
+   dari app.css yang sudah ada supaya tidak berisiko menimpa style lama
+   yang sudah dipakai semua halaman (ntp-card/ntp-table/ntp-badge dst).
+
+   Struktur (3 lapis, sesuai mockup yang disetujui):
+   html/body (height:100%, no scroll) > .ntp-shell (flex column, 100vh)
+     > .ntp-appheader (flex:0 0 auto, DIAM)
+     > .ntp-body (flex:1, flex row, min-height:0)
+         > .ntp-sidebar (flex:0 0 <lebar>, DIAM, collapsible)
+         > .ntp-content (flex:1, overflow-y:auto - INI yang scroll utama)
+     > .ntp-appfooter (flex:0 0 auto, DIAM)
+
+   Lapis ke-2 (opsional, dipakai halaman yang punya tab seperti
+   Firewall/IPsec): .ntp-page (flex column, height:100% dari .ntp-content)
+     > .ntp-page-header (flex:0 0 auto, DIAM - judul + tab)
+     > .ntp-page-scroll (flex:1, overflow-y:auto - INI yang scroll)
+     > .ntp-page-footer (flex:0 0 auto, DIAM - dipakai untuk form
+       "Add rule" dst, opsional)
+   ============================================================ */
+
+:root {
+    --ntp-header-h: 64px;
+    --ntp-footer-h: 34px;
+    --ntp-sidebar-w: 200px;
+    --ntp-sidebar-w-collapsed: 80px;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+.ntp-shell {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* cegah scroll di level body - hanya area di dalam yang scroll */
+}
+
+/* ---------- Layer 1: App header (diam) ---------- */
+.ntp-appheader {
+    flex: 0 0 var(--ntp-header-h);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.ntp-collapse-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #374151;
+    flex: 0 0 auto;
+}
+.ntp-collapse-btn:hover {
+    background: #eef0f4;
+}
+
+.ntp-appheader-logo {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+}
+.ntp-appheader-logo img {
+    height: 38px;
+    width: auto;
+    display: block;
+}
+
+.ntp-appheader-divider {
+    flex: 0 0 auto;
+    width: 1px;
+    height: 28px;
+    background: #e5e7eb;
+}
+
+/* Judul halaman besar di header (mis. "Firewall > Rules") - MENGGANTI
+   breadcrumb kecil yang dulu ada di sini. Halaman set $pageHeading
+   sebelum include layout_header.php; kalau tidak di-set, fallback ke
+   label nav item aktif. */
+.ntp-appheader-heading {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1b1f24;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ntp-appheader-heading .sep {
+    color: #9ca3af;
+    font-weight: 400;
+    margin: 0 8px;
+}
+.ntp-appheader-heading .tail {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.ntp-appheader-spacer {
+    flex: 1;
+}
+
+.ntp-appheader-alerts {
+    position: relative;
+    flex: 0 0 auto;
+}
+.ntp-alert-bell-btn {
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    line-height: normal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: #374151;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+}
+.ntp-alert-bell-btn:hover {
+    background: #eef0f4;
+}
+.ntp-alert-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: #d64545;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 15px;
+    text-align: center;
+}
+.ntp-alert-panel {
+    display: none;
+    position: absolute;
+    top: 40px;
+    right: 0;
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 50;
+}
+.ntp-alert-panel.open {
+    display: block;
+}
+.ntp-alert-panel-header {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e7eb;
+    color: #1b1f24;
+}
+.ntp-alert-panel-empty {
+    padding: 16px 14px;
+    font-size: 12px;
+    color: #9ca3af;
+}
+.ntp-alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #374151;
+    text-decoration: none;
+    border-bottom: 1px solid #f3f4f6;
+}
+.ntp-alert-item:last-child {
+    border-bottom: none;
+}
+.ntp-alert-item:hover {
+    background: #f9fafb;
+}
+.ntp-alert-item-critical i {
+    color: #b3261e;
+}
+.ntp-alert-item-warning i {
+    color: #9a5b00;
+}
+
+.ntp-appheader-user {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ntp-appheader-username {
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+.ntp-logout-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: #374151;
+    text-decoration: none;
+    flex: 0 0 auto;
+}
+.ntp-logout-btn:hover {
+    background: #eef0f4;
+    color: #b3261e;
+}
+
+/* ---------- Body row: sidebar + content ---------- */
+.ntp-body {
+    flex: 1;
+    display: flex;
+    min-height: 0; /* WAJIB supaya child overflow:auto benar-benar bisa scroll di flexbox */
+}
+
+/* ---------- Sidebar (diam, collapsible) ---------- */
+.ntp-sidebar {
+    flex: 0 0 var(--ntp-sidebar-w);
+    background: #14213d;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: flex-basis 0.15s ease;
+    padding: 12px 8px;
+}
+.ntp-sidebar.collapsed {
+    flex-basis: var(--ntp-sidebar-w-collapsed);
+}
+
+.ntp-sidebar-brand {
+    display: none; /* brand sekarang di app header, bukan di sidebar lagi */
+}
+
+.ntp-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: #b8c0d6;
+    text-decoration: none;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: 13px;
+}
+.ntp-nav-link i {
+    font-size: 17px;
+    flex: 0 0 auto;
+    line-height: 1;
+}
+.ntp-nav-link:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+}
+.ntp-nav-link.active {
+    background: rgba(255,255,255,0.14);
+    color: #fff;
+}
+
+/* ---------- Grup nav sidebar (Network, VPN dst) ----------
+   Tombol toggle terlihat SAMA seperti .ntp-nav-link biasa (ikon+label),
+   ditambah chevron di kanan yang berputar 90deg saat grup terbuka.
+   Submenu (.ntp-nav-group) sedikit di-indent + ikon lebih kecil,
+   membedakan visual dari item level atas tanpa terasa seperti halaman
+   terpisah sama sekali. */
+.ntp-nav-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: #b8c0d6;
+    background: none;
+    border: none;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+.ntp-nav-group-toggle i:first-child {
+    font-size: 17px;
+    flex: 0 0 auto;
+    line-height: 1;
+}
+.ntp-nav-group-toggle:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+}
+.ntp-nav-group-toggle.active {
+    color: #fff;
+}
+.ntp-nav-group-chevron {
+    margin-left: auto;
+    font-size: 14px !important;
+    flex: 0 0 auto;
+    transition: transform 0.15s ease;
+}
+.ntp-nav-group-toggle[aria-expanded="true"] .ntp-nav-group-chevron {
+    transform: rotate(90deg);
+}
+/* Highlight visual saat grup terbuka - RCA (ditemukan bro langsung):
+   dulu TIDAK ADA feedback visual sama sekali selain chevron berputar
+   (dan bahkan itu pun rusak, lihat RCA JS di atas) - klik terasa tidak
+   merespons apa-apa. Latar sedikit lebih terang saat grup terbuka,
+   terpisah dari .active (yang menandakan "halaman AKTIF ada di dalam
+   grup ini", bukan "grup ini sedang dibuka/ditutup" - dua hal
+   berbeda, keduanya bisa true bersamaan atau tidak). */
+.ntp-nav-group-toggle.open {
+    background: rgba(255,255,255,0.06);
+}
+.ntp-nav-group {
+    display: none;
+    padding-left: 6px;
+    border-left: 1px solid rgba(255,255,255,0.12);
+    margin: 0 0 4px 19px;
+}
+.ntp-nav-group.open {
+    display: block;
+}
+.ntp-nav-link-sub {
+    padding-left: 8px;
+    font-size: 12px;
+}
+.ntp-nav-link-sub i {
+    font-size: 15px !important;
+}
+/* Sidebar collapsed: grup disembunyikan total (bukan cuma label) -
+   submenu terbuka di lebar 80px akan kepotong/terlihat aneh, dan
+   memaksa admin buka sidebar penuh dulu untuk navigasi ke situ lebih
+   masuk akal daripada mencoba muat submenu di ruang sesempit itu. */
+.ntp-sidebar.collapsed .ntp-nav-group-toggle span,
+.ntp-sidebar.collapsed .ntp-nav-group-chevron {
+    display: none;
+}
+.ntp-sidebar.collapsed .ntp-nav-group {
+    display: none !important;
+}
+/* Sidebar collapsed: sembunyikan label teks, ikon tetap rata kiri (BUKAN center) */
+/* Sidebar collapsed: sembunyikan label teks, ikon tetap rata kiri (BUKAN
+   center). Padding link di-set ULANG khusus untuk mode ini - padding
+   bawaan (10px kiri-kanan) cuma nyisa 16px dari lebar collapsed 52px
+   dikurangi padding sidebar 8px, padahal ikon sendiri 17px = kepotong.
+   10px kiri + 0 kanan memberi ruang cukup DAN tetap rata kiri, bukan
+   di-center. */
+.ntp-sidebar.collapsed .ntp-nav-link {
+    padding: 8px 0 8px 16px;
+}
+.ntp-sidebar.collapsed .ntp-nav-link span {
+    display: none;
+}
+.ntp-sidebar.collapsed .ntp-nav-group-toggle {
+    padding: 8px 0 8px 16px;
+}
+
+/* ---------- Main content (INI yang scroll) ---------- */
+.ntp-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f9fafb;
+}
+
+/* ---------- App footer (diam) ---------- */
+.ntp-appfooter {
+    flex: 0 0 var(--ntp-footer-h);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    color: #9ca3af;
+    font-size: 12px;
+}
+.ntp-appfooter-spacer {
+    flex: 1;
+}
+
+/* ---------- Layer 2 (opsional): halaman dengan tab + scroll bersarang ----------
+   Dipakai HANYA oleh halaman yang butuh (Firewall, IPsec, dst) - bukan
+   wajib untuk semua halaman. Kalau tidak dipakai, .ntp-content tetap
+   scroll biasa seperti sebelumnya. */
+.ntp-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin: -20px; /* lawan padding .ntp-content supaya lapis ini pas penuh */
+}
+
+.ntp-page-header {
+    flex: 0 0 auto;
+    padding: 12px 20px 0;
+    background: #f9fafb;
+}
+
+.ntp-page-scroll {
+    flex: 1;
+    min-height: 0; /* FIX: tanpa ini, flex item defaultnya menolak menyusut
+                       di bawah tinggi kontennya sendiri - overflow-y:auto
+                       jadi tidak pernah benar-benar aktif DI SINI, dan
+                       scroll malah "bocor" ke kontainer luar (.ntp-content)
+                       - persis bug yang sudah pernah diperbaiki untuk
+                       .ntp-body, kelewat diterapkan lagi di sini. */
+    overflow-y: auto;
+    padding: 10px 20px;
+}
+
+/* Header tabel DIAM (sticky) saat area .ntp-page-scroll di-scroll -
+   cuma baris data yang benar-benar gerak. 'position: sticky' butuh
+   struktur <thead>/<tbody> yang benar untuk konsisten di semua browser
+   (bukan cuma <tr> pertama telanjang di dalam <table>). Header dibuat
+   LEBIH GELAP dari baris data + ada garis pemisah antar kolom (border-
+   right per <th>) - baris data SENGAJA tidak diberi pemisah kolom sama
+   sekali, cuma garis horizontal antar baris (sudah ada dari .ntp-table
+   bawaan), supaya kontras header-vs-data jelas tanpa bikin tabel
+   kelihatan penuh garis.
+
+   FIX (bug nyata - baris data sempat kelihatan menembus di belakang
+   header saat scroll): border-spacing default tabel HTML menyisakan
+   celah antar sel yang membuat baris di baliknya sedikit tembus.
+   'border-collapse: collapse' menghilangkan celah itu total, dan
+   background diberikan di level <tr> SEKALIGUS <th> (bukan cuma <th>)
+   supaya tidak ada titik mana pun di baris header yang transparan. */
+/* ---------- Tabel 2-lapis: header BENAR-BENAR terpisah dari body ----------
+   Solusi definitif untuk keluhan nyata: scrollbar browser SELALU
+   terhitung dari posisi asli header, karena 'position: sticky' cuma
+   efek visual - tidak pernah benar-benar memisahkan header dari total
+   tinggi area scroll di mata browser manapun. Di sini header genuinely
+   BUKAN bagian dari .ntp-page-scroll sama sekali (dia di
+   .ntp-page-header, di luar area yang scroll) - scrollbar jadi cuma
+   mencakup baris data, persis yang diminta.
+
+   Lebar kolom disinkronkan lewat <colgroup> IDENTIK di kedua tabel
+   (dirender dari PHP array yang sama) - satu-satunya cara CSS murni
+   (tanpa JS) menjamin kolom tetap sejajar persis antara dua <table>
+   yang terpisah. */
+.ntp-table-header-only,
+.ntp-table-body-only {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+}
+.ntp-table-header-only {
+    border: 1px solid #c74b00;
+    border-bottom: none;
+    margin-bottom: -1px; /* satukan visual dengan border atas tabel body di bawahnya, tidak ada celah/border dobel */
+}
+.ntp-table-body-only {
+    border: 1px solid #c74b00;
+    border-top: none;
+}
+.ntp-table-header-only thead tr {
+    background: #e2e5ea;
+}
+.ntp-table-header-only th {
+    color: #374151;
+    border-bottom: 1px solid #cbd1d9;
+    border-right: 1px solid #cbd1d9;
+    text-align: left;
+    padding: 8px 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ntp-table-header-only th:last-child {
+    border-right: none;
+}
+
+.ntp-page-footer {
+    flex: 0 0 auto;
+    border-top: 1px solid #e5e7eb;
+    padding: 10px 20px;
+    background: #ffffff;
+}
+
+/* Judul halaman gabung dengan breadcrumb jadi satu baris ringkas
+   (mis. "Firewall > Rules"), bukan breadcrumb kecil + <h2> besar
+   terpisah yang makan ruang vertikal dua kali lipat. */
+.ntp-page-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: #1b1f24;
+}
+.ntp-page-title .sep {
+    color: #9ca3af;
+    font-weight: 400;
+    margin: 0 6px;
+}
+.ntp-page-title .tail {
+    color: #6b7280;
+    font-weight: 400;
+}
+
+/* pf Status ringkas jadi satu baris inline, bukan ntp-card penuh
+   dengan header+padding terpisah. */
+.ntp-status-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+/* ---------- Tab bar model pill (bukan underline tipis lagi) ----------
+   Warna aktif diambil LANGSUNG dari warna asli logo (oranye #c74b00,
+   disampel dari file logo, bukan ditebak) - supaya kontras jelas
+   terhadap navy sidebar/putih konten/hijau badge yang sudah dipakai di
+   tempat lain, dan tetap konsisten dengan identitas brand. Dipakai di
+   semua halaman bertab (Firewall, IPsec, System Logs). */
+.ntp-tabbar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-bottom: 4px;
+}
+.ntp-tab {
+    padding: 8px 14px;
+    font-size: 13px;
+    text-decoration: none;
+    white-space: nowrap;
+    border-radius: 7px;
+    background: #eef0f3;
+    color: #6b7280;
+    border: 1px solid transparent;
+    transition: background 0.1s ease;
+}
+.ntp-tab:hover {
+    background: #e2e5ea;
+    color: #374151;
+}
+.ntp-tab.active {
+    background: #ffffff;
+    color: #1b1f24;
+    font-weight: 600;
+    border-color: #c74b00;
+    border-bottom: 3px solid #c74b00;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* ---------- Scroll TABEL saja (pendekatan sederhana & robust) ----------
+   Dipakai langsung membungkus <table>, BUKAN pola .ntp-page 3-lapis
+   yang bergantung ke height:100% bertingkat lewat flexbox (terbukti
+   rapuh di environment nyata - beberapa kali percobaan sebelumnya
+   tidak stabil meski hasil DevTools menunjukkan angka height yang
+   benar). Di sini tinggi kontainer scroll ditentukan LANGSUNG lewat
+   nilai tetap (max-height), tidak bergantung rantai height:100% dari
+   leluhur mana pun - jauh lebih predictable. Scroll dua arah
+   (vertikal DAN horizontal, untuk tabel dengan banyak kolom/baris)
+   ditangani otomatis oleh 'overflow: auto' begitu konten melebihi
+   batas ke arah mana pun. */
+.ntp-table-scroll {
+    overflow: auto;
+    max-height: 60vh;
+    border: 1px solid #c74b00;
+}
+.ntp-table-scroll table {
+    border-collapse: collapse;
+    width: 100%;
+}
+.ntp-table-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #e2e5ea;
+    color: #374151;
+    border-bottom: 1px solid #cbd1d9;
+    border-right: 1px solid #cbd1d9;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+.ntp-table-scroll thead th:last-child {
+    border-right: none;
+}
+.ntp-table-scroll tbody td {
+    white-space: nowrap;
+}
+
+/* ---------- Tabel dengan kolom bisa di-drag resize ----------
+   Dipakai untuk tabel yang punya kolom teks BEBAS/panjang (mis. pesan
+   alert, suggested action) - BEDA dari .ntp-table-scroll yang sengaja
+   'white-space: nowrap' di semua sel (cocok untuk tabel isi pendek
+   macam IP/badge, tapi itu JUSTRU penyebab teks panjang MENEMBUS ke
+   kolom sebelah alih-alih membungkus, bug nyata yang ditemukan bro
+   langsung di halaman Alerts). Di sini teks BOLEH membungkus
+   (white-space: normal + word-break), dan admin bisa tarik batas
+   kolom di header untuk atur lebar sendiri sesuai kebutuhan - lebar
+   final DIPERTAHANKAN lewat <col> per kolom (table-layout: fixed),
+   bukan auto-size ulang tiap render.
+   Skrip pendamping: fungsi ntpInitResizableTables() di app-shell.js -
+   dipanggil otomatis untuk SETIAP <table class="ntp-table-resizable">
+   di halaman saat DOMContentLoaded. */
+/* ---------- Search filter tabel (reusable) ----------
+   Dipasangkan dengan JS ntpInitTableSearch() di app-shell.js lewat
+   atribut data-table-target. */
+.ntp-table-search {
+    width: 100%;
+    max-width: 320px;
+    padding: 7px 10px;
+    font-size:12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+.ntp-table-search:focus {
+    outline: none;
+    border-color: #14213d;
+}
+
+.ntp-table-resizable-wrap {
+    overflow: auto;
+    max-height: 60vh; /* balik ke max-height (bukan height tetap) - RCA asli
+       (typo 'position' ganda di thead th) sudah diperbaiki, jadi tidak perlu
+       lagi trade-off ruang kosong dari height tetap. Konsisten dengan
+       .ntp-table-scroll yang sudah lama terbukti benar pakai max-height. */
+    border: 1px solid #c74b00;
+}
+.ntp-table-resizable {
+    /* RCA nyata: bug sebenarnya BUKAN border-collapse (lihat komentar
+       thead th di bawah untuk penyebab asli - typo 'position' ganda) -
+       dikembalikan ke 'collapse' supaya konsisten dengan .ntp-table-scroll
+       yang sudah terbukti benar, bukan menyimpan penyimpangan yang
+       ternyata tidak perlu. */
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+}
+.ntp-table-resizable thead th {
+    position: sticky; /* RCA nyata (ditemukan bro langsung, via perbandingan
+       ke .ntp-table-scroll yang justru BEKERJA benar meski sama-sama pakai
+       border-collapse): rule ini SEBELUMNYA punya 'position: relative' KEDUA
+       di bawah sini (typo saya sendiri, niatnya buat anchor resize handle) -
+       properti CSS yang sama ditulis dua kali dalam SATU rule, yang TERAKHIR
+       menang, jadi 'relative' diam-diam MENIMPA TOTAL 'sticky' di atas.
+       position:sticky SENDIRI sudah cukup jadi containing-block untuk child
+       position:absolute (resize handle) - tidak pernah butuh baris kedua
+       sama sekali. */
+    top: 0;
+    z-index: 2;
+    background: #e2e5ea;
+    color: #374151;
+    border-bottom: 1px solid #cbd1d9;
+    border-right: 1px solid #cbd1d9;
+    text-align: left;
+    padding: 8px 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px; /* SAMA dengan .ntp-tab - disamakan atas permintaan langsung */
+    font-weight: 600;
+}
+.ntp-table-resizable thead th:last-child {
+    border-right: none;
+}
+.ntp-table-resizable tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    white-space: normal;
+    word-break: break-word;
+    vertical-align: top;
+    font-size: 12px; /* SATU ukuran konsisten untuk semua sel - RCA: kolom
+       yang tidak diberi font-size inline jatuh ke default browser (lebih
+       besar), bikin "Source"/"Message" kelihatan beda ukuran dari kolom
+       lain yang kebetulan dikasih font-size manual. Ditetapkan di level
+       komponen di sini supaya SEMUA sel otomatis konsisten, tidak
+       bergantung pemanggil mengatur satu-satu. */
+}
+.ntp-col-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 3;
+    touch-action: none;
+}
+.ntp-col-resize-handle:hover,
+.ntp-col-resize-handle.resizing {
+    background: #c74b00;
+    opacity: 0.4;
+}
+
+/* ---------- Mobile: auto-collapse di bawah 900px ----------
+   Kecuali admin eksplisit klik toggle untuk buka manual (class
+   .force-expanded, diberi lewat JS, menang atas media query ini). */
+@media (max-width: 900px) {
+    .ntp-sidebar:not(.force-expanded) {
+        flex-basis: var(--ntp-sidebar-w-collapsed);
+    }
+    .ntp-sidebar:not(.force-expanded) .ntp-nav-link span {
+        display: none;
+    }
+}
