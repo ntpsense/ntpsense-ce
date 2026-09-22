@@ -2,11 +2,12 @@
 name = "ntpsense-configd"
 version = "0.1.0"
 edition = "2021"
-authors = ["NTPRO TEKNOLOGI JAYA"]
+authors = ["NTPRO TEKNOLOGI JAYA <halik.sahbana@ntpsense.com>"]
 description = "NTPSense InetGateway Community Edition - privileged config daemon (ntpsense-configd)"
 license = "Apache-2.0"
 repository = "https://github.com/ntpsense/ntpsense-ce"
 readme = "README.md"
+
 
 [features]
 default = []
