@@ -8,6 +8,12 @@ license = "Apache-2.0"
 repository = "https://github.com/ntpsense/ntpsense-ce"
 readme = "README.md"
 
+[features]
+default = []
+# Feature flag for Pro edition code paths.
+# CE builds leave this disabled so Pro-only code is compiled out / allowed as unused.
+pro = []
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
