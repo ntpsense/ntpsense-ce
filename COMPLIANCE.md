@@ -1,6 +1,6 @@
 # NTPSense InetGateway CE — Compliance & NGFW Readiness
 
-**Version:** 0.1 (Community Edition)  
+**Version:** 0.1.1 (Community Edition)  
 **Last updated:** 2026-09-23  
 **Scope:** This document describes the current security, audit, and Next-Generation Firewall (NGFW) related controls present in NTPSense CE, and explicitly lists known gaps. It is intended for internal use, customer due-diligence, and roadmap planning.
 
@@ -30,7 +30,7 @@ It does **not** claim certification against any formal standard (ISO 27001, PCI-
 | **Identity / Authentication** | Local users + FreeRADIUS + LDAP client | Partial | Web UI supports 2FA (TOTP); RADIUS/LDAP for services |
 | **Access Control (RBAC)** | Role-based (Administrator / Network Operator / Auditor) | Implemented | Applied to both Web UI and console menu |
 | **Secure Management** | HTTPS-only Web UI, forced password change, lockout, CAPTCHA, 2FA | Implemented | Self-signed cert on first boot; session hardening present |
-| **Audit Logging** | Login events, EULA acceptance, some operational events | Basic | Not yet a full change-audit trail for every configuration object |
+| **Audit Logging** | Users Activity log (JSONL) + partial change recording | Basic → Improving | See section 3.1 below |
 | **Configuration Integrity** | Atomic writes in daemon, JSON configs | Partial | No signed config, no full version history / diff in CE |
 | **Logging & Retention** | Local system logs + Suricata EVE + multiwan event log | Basic | No formal retention policy or remote syslog configuration UI yet |
 | **IPv6** | Limited | Partial | Primarily IPv4-focused in current CE |
@@ -46,6 +46,32 @@ It does **not** claim certification against any formal standard (ISO 27001, PCI-
 - **RBAC** already distinguishes read-oriented (Auditor) from change-capable roles.
 - **Authentication hardening** on the management plane (lockout, CAPTCHA, optional 2FA, forced password change on first login).
 - **Open source (Apache 2.0)** allows independent review of the control plane.
+
+### 3.1 Audit Logging (detail)
+
+**Existing (Web UI side)**  
+File: `/usr/local/etc/ntpsense/webui/users-activity.jsonl`  
+Implemented in `webui/lib/AuditLog.php`.
+
+Records (JSON Lines):
+
+- Successful / failed login
+- Logout
+- EULA acceptance (bound to verified username)
+- Page access that passed RBAC checks
+- Selected high-value configuration changes via `AuditLog::logChange()` (old → new when the data is available in PHP)
+
+Sensitive fields (`password`, keys, certificates, etc.) are redacted.
+
+Rotation: ~5 MB, one rotated copy kept.
+
+**Current limitation**  
+Not every configuration object change that is executed by the Rust daemon is recorded with full actor + before/after detail. The automatic page-access log records that a privileged role was allowed to open/submit a page; it does not always prove the business action inside the handler succeeded or capture the exact old/new values.
+
+**Planned CE improvement (Point 5B)**  
+- Standardise and expand use of `logChange()` on critical Web UI handlers  
+- Add a lightweight structured audit helper in `ntpsense-configd` for successful mutating actions (firewall, multi-WAN, security, VPN, proxy)  
+- Keep a single, reviewable JSONL format suitable for export to SIEM later
 
 ---
 
@@ -89,6 +115,7 @@ Operators should verify the following after every installation or major upgrade:
 - [ ] Regular configuration backup is performed and stored offline
 - [ ] System time is synchronized (NTP)
 - [ ] Log files are monitored for disk space
+- [ ] Users Activity log (`users-activity.jsonl`) is reviewed periodically
 
 ---
 
@@ -96,7 +123,7 @@ Operators should verify the following after every installation or major upgrade:
 
 Short-term improvements planned for CE (non-exhaustive):
 
-- Richer audit logging for configuration changes
+- Richer audit logging for configuration changes (this Point 5B)
 - Simple configuration export with checksum
 - Basic remote syslog support
 - Improved IPv6 coverage
