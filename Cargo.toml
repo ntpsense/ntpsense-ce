@@ -1,0 +1,22 @@
+[package]
+name = "ntpsense-configd"
+version = "0.1.0"
+edition = "2021"
+authors = ["NTPRO TEKNOLOGI JAYA"]
+description = "NTPSense InetGateway Community Edition - privileged config daemon (ntpsense-configd)"
+license = "Apache-2.0"
+repository = "https://github.com/ntpsense/ntpsense-ce"
+readme = "README.md"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hmac = "0.12"
+sha2 = "0.10"
+nix = { version = "0.29", features = ["fs", "process", "user", "socket"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
