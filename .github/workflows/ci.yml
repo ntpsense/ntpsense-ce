@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: cargo test --all-targets --all-features
+
+  php:
+    name: PHP syntax checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PHP
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes php-cli
+
+      - name: Check PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t php_files < <(find webui -type f -name '*.php' -print)
+          if [ "${#php_files[@]}" -eq 0 ]; then
+            echo "No PHP files found."
+            exit 0
+          fi
+          for file in "${php_files[@]}"; do
+            echo "Checking ${file}"
+            php -l "${file}"
+          done
+
+  shell:
+    name: Shell script checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+
+      - name: Check shell scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t shell_files < <(find . -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) -print | sort)
+          if [ "${#shell_files[@]}" -eq 0 ]; then
+            echo "No shell scripts found."
+            exit 0
+          fi
+          shellcheck --shell=sh "${shell_files[@]}"
