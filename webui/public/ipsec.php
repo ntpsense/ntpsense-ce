@@ -287,6 +287,7 @@ if (!$installed) {
           </a>
           <form method="post" style="margin:0; display:inline-block;">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="ipsec_tunnel_set_enabled">
             <input type="hidden" name="id" value="<?= htmlspecialchars($t['id']) ?>">
             <?php if ($enabled): ?>
@@ -303,6 +304,7 @@ if (!$installed) {
           </form>
           <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Disconnect this Phase 1 now? It will reconnect automatically on the next matching traffic (start_action = trap) - this does not disable or delete the tunnel.');">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="ipsec_tunnel_terminate">
             <input type="hidden" name="id" value="<?= htmlspecialchars($t['id']) ?>">
             <button type="submit" title="Disconnect (temporary - will reconnect on new traffic)" style="background:none; border:none; cursor:pointer; color:#6b7280; padding:4px;">
@@ -310,6 +312,7 @@ if (!$installed) {
             </button>
           </form>
           <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete tunnel <?= htmlspecialchars($t['name'] ?? '') ?>
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?> and ALL its Phase 2 entries? The remote peer will need to be reconfigured too.');">
             <input type="hidden" name="form" value="ipsec_tunnel_delete">
             <input type="hidden" name="id" value="<?= htmlspecialchars($t['id']) ?>">
@@ -348,6 +351,7 @@ if (!$installed) {
                   </a>
                   <form method="post" style="margin:0; display:inline-block;">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
                     <input type="hidden" name="form" value="ipsec_phase2_set_enabled">
                     <input type="hidden" name="tunnel_id" value="<?= htmlspecialchars($t['id']) ?>">
                     <input type="hidden" name="phase2_id" value="<?= htmlspecialchars($p2['id']) ?>">
@@ -365,6 +369,7 @@ if (!$installed) {
                   </form>
                   <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Disconnect this Phase 2 now? It will reconnect automatically on the next matching traffic - this does not disable or delete it.');">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
                     <input type="hidden" name="form" value="ipsec_phase2_terminate">
                     <input type="hidden" name="phase2_id" value="<?= htmlspecialchars($p2['id']) ?>">
                     <button type="submit" title="Disconnect (temporary - will reconnect on new traffic)" style="background:none; border:none; cursor:pointer; color:#6b7280; padding:4px;">
@@ -372,6 +377,7 @@ if (!$installed) {
                     </button>
                   </form>
                   <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Remove this Phase 2 entry?');">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
                     <input type="hidden" name="form" value="ipsec_phase2_delete">
                     <input type="hidden" name="tunnel_id" value="<?= htmlspecialchars($t['id']) ?>">
@@ -387,6 +393,7 @@ if (!$installed) {
           <?php $isEditingThisP2 = $editPhase2Tunnel && $editPhase2Tunnel['id'] === $t['id']; ?>
           <?php if ($phase2ForId === $t['id'] || $isEditingThisP2): ?>
             <form method="post" style="margin-top:8px; display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="<?= $isEditingThisP2 ? 'ipsec_phase2_edit' : 'ipsec_phase2_add' ?>">
               <input type="hidden" name="tunnel_id" value="<?= htmlspecialchars($t['id']) ?>">
@@ -433,6 +440,7 @@ if (!$installed) {
     </div>
   <?php endif; ?>
   <form method="post" style="padding:14px; display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="<?= $editingTunnel ? 'ipsec_tunnel_edit' : 'ipsec_tunnel_add' ?>">
     <?php if ($editingTunnel): ?>
