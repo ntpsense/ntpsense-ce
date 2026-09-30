@@ -530,7 +530,7 @@ log "2eth v2 install complete: LAN1 (dual-purpose) + WAN1 + anti-lockout rule + 
 # Auth::ensureBootstrapped() through the process environment only.
 # The Web UI stores only the password hash.
 # ============================================================
-BOOTSTRAP_CRED_FILE="/root/ntpsense-bootstrap-credential"
+BOOTSTRAP_CRED_FILE="/usr/local/etc/ntpsense/webui/.bootstrap-credential"
 if [ ! -f "${BOOTSTRAP_CRED_FILE}" ]; then
     umask 077
     BOOTSTRAP_PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | cut -c1-32)
@@ -539,6 +539,7 @@ if [ ! -f "${BOOTSTRAP_CRED_FILE}" ]; then
     fi
     printf '%s\n' "${BOOTSTRAP_PASSWORD}" > "${BOOTSTRAP_CRED_FILE}"
     chmod 600 "${BOOTSTRAP_CRED_FILE}"
+    chown www:ntpsenseweb "${BOOTSTRAP_CRED_FILE}"
 else
     BOOTSTRAP_PASSWORD=$(cat "${BOOTSTRAP_CRED_FILE}")
 fi
@@ -612,5 +613,5 @@ date > "${INSTALL_MARKER}"
 log "CHECKPOINT 20: install marker written"
 log ""
 log "WEB UI ACCESS: https://${LAN1_GATEWAY_IP}/ from a device connected to ${LAN1_IF}"
-log "Web UI login: admin / generated bootstrap credential (see /root/ntpsense-bootstrap-credential) - change it immediately on first login"
+log "Web UI login: admin / generated bootstrap credential (see /usr/local/etc/ntpsense/webui/.bootstrap-credential) - change it immediately on first login"
 log "CONSOLE/SSH ACCESS: provision the OS administrator password separately; it is NOT shared with the Web UI."
