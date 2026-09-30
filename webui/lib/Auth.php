@@ -465,12 +465,6 @@ final class Auth
             $_SESSION['ntpsense_admin'] = true;
             $_SESSION['ntpsense_username'] = $username;
             $_SESSION['ntpsense_must_change_password'] = false;
-        // First-boot bootstrap credential is deliberately one-time. Remove it
-        // after the administrator successfully sets a new password.
-        $bootstrapCredentialFile = '/usr/local/etc/ntpsense/webui/.bootstrap-credential';
-        if (is_file($bootstrapCredentialFile)) {
-            @unlink($bootstrapCredentialFile);
-        }
             session_regenerate_id(true);
             AuditLog::logLogin($username, true, "external auth (role: {$externalRole})");
             return 'ok';
@@ -525,6 +519,13 @@ final class Auth
         $username = (string) ($_SESSION['ntpsense_username'] ?? '');
         self::changePasswordForUser($username, $newPassword);
         $_SESSION['ntpsense_must_change_password'] = false;
+
+        // First-boot bootstrap credential is deliberately one-time. Remove it
+        // after the administrator successfully sets a new password.
+        $bootstrapCredentialFile = '/usr/local/etc/ntpsense/webui/.bootstrap-credential';
+        if (is_file($bootstrapCredentialFile)) {
+            @unlink($bootstrapCredentialFile);
+        }
 
         // Roadmap console menu (permintaan user) - sinkronkan password
         // OS juga, supaya SATU password genuinely berlaku untuk Web UI
