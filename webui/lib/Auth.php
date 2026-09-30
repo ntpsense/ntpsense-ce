@@ -410,6 +410,7 @@ final class Auth
      */
     public static function isLockedOut(string $username, string $ip): bool
     {
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
         $state = self::loadLockoutState();
         $now = time();
         $changed = false;
@@ -430,8 +431,11 @@ final class Auth
         return $locked;
     }
     /** @return int Detik tersisa sebelum bisa mencoba lagi (0 kalau tidak sedang lockout). */
+        });
+    
     public static function lockoutSecondsRemaining(string $username, string $ip): int
     {
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
         $state = self::loadLockoutState();
         $now = time();
         $remaining = 0;
@@ -442,8 +446,11 @@ final class Auth
         }
         return $remaining;
     }
+        });
+    
     private static function registerFailedAttempt(string $username, string $ip): void
     {
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
         $state = self::loadLockoutState();
         $now = time();
         foreach (['user:' . $username, 'ip:' . $ip] as $key) {
@@ -457,8 +464,11 @@ final class Auth
         }
         self::saveLockoutState($state);
     }
+        });
+    
     private static function clearFailedAttempts(string $username, string $ip): void
     {
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
         $state = self::loadLockoutState();
         unset($state['user:' . $username], $state['ip:' . $ip]);
         self::saveLockoutState($state);
@@ -470,6 +480,8 @@ final class Auth
      * return value ini, pesan spesifik biar login.php yang urus lewat
      * isLockedOut()/lockoutSecondsRemaining() terpisah seperti sebelumnya).
      */
+        });
+    
     public static function attempt(string $username, string $password): string
     {
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '-');
