@@ -160,6 +160,7 @@ $_SESSION['captcha_answer'] = (string) ($num1 + $num2);
       <?php endif; ?>
       <form method="post">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
         <div class="ntp-field">
           <label for="totp_code">Authentication code</label>
           <input type="text" id="totp_code" name="totp_code" class="ntp-totp-code-input" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" maxlength="10" required autofocus>
@@ -168,6 +169,7 @@ $_SESSION['captcha_answer'] = (string) ($num1 + $num2);
         <button type="submit" class="ntp-btn-primary">Verify</button>
       </form>
       <form method="post" style="margin-top:10px; text-align:center;">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
         <input type="hidden" name="cancel_2fa" value="1">
         <button type="submit" style="background:none; border:none; color:#6b7280; font-size:12px; cursor:pointer; text-decoration:underline;">Back to login</button>
@@ -178,6 +180,7 @@ $_SESSION['captcha_answer'] = (string) ($num1 + $num2);
         <div class="ntp-alert-error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
       <form method="post">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
         <div class="ntp-field">
           <label for="username">Username</label>
