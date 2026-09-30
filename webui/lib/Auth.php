@@ -84,6 +84,67 @@ final class Auth
         'vpn', 'ipsec', 'services', 'system_logs', 'package_manager',
     ];
     private const PERMISSION_LEVELS = ['none', 'read', 'write'];
+    private const CSRF_SESSION_KEY = 'ntpsense_csrf_token';
+
+    /**
+     * Start the Web UI session with defensive cookie attributes.
+     * Must be called before any session_start() call in public entrypoints.
+     */
+    public static function startSession(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return;
+        }
+        ini_set('session.use_strict_mode', '1');
+        $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        session_set_cookie_params([
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => 'Strict',
+            'path' => '/',
+        ]);
+        session_start();
+    }
+
+    /** Return the per-session CSRF token, generating it with CSPRNG when needed. */
+    public static function csrfToken(): string
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            self::startSession();
+        }
+        $token = (string) ($_SESSION[self::CSRF_SESSION_KEY] ?? '');
+        if ($token === '') {
+            $token = bin2hex(random_bytes(32));
+            $_SESSION[self::CSRF_SESSION_KEY] = $token;
+        }
+        return $token;
+    }
+
+    /** Render a hidden CSRF field for HTML forms. */
+    public static function csrfField(): string
+    {
+        return '<input type="hidden" name="_csrf" value="'
+            . htmlspecialchars(self::csrfToken(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '">';
+    }
+
+    /** Reject mutating requests without a valid same-session CSRF token. */
+    public static function requireCsrf(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return;
+        }
+        $expected = self::csrfToken();
+        $provided = (string) ($_POST['_csrf'] ?? '');
+        if ($provided === '' || !hash_equals($expected, $provided)) {
+            AuditLog::logAccess('security', (string) ($_POST['form'] ?? '(unnamed form)'), 'denied - invalid CSRF token');
+            http_response_code(403);
+            echo '<!DOCTYPE html><html><body style="font-family:sans-serif; padding:40px; text-align:center;">'
+                . '<h2>Request rejected</h2><p>Invalid or missing CSRF token. Please reload the page and try again.</p>'
+                . '<p><a href="/login.php">Back to login</a></p></body></html>';
+            exit;
+        }
+    }
     /**
      * Gerbang lisensi Pro dipakai bareng di createUser()/createRole()/
      * beginTotpSetup() - satu titik kebenaran, bukan dicek ulang
