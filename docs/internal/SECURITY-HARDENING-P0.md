@@ -61,8 +61,33 @@ Runtime checks:
 ## Acceptance criteria
 SEC-01 is complete only when every mutating POST has a valid session-bound CSRF token, invalid requests return 403 and generate an audit event, existing valid operations still work, and FreeBSD-Build validation passes.
 
-## SEC-02 next
-Replace the installer’s static OS bootstrap credential with a random one-time bootstrap or interactive initialization. Force password change and stop silently coupling Web UI and OS credentials.
+## SEC-02 status — IMPLEMENTED
+The installer no longer ships a static `admin/admin` credential.
+
+Bootstrap flow:
+1. generate a 32-character random alphanumeric credential on the gateway;
+2. pass it to `Auth::ensureBootstrapped()` through `NTPSENSE_BOOTSTRAP_PASSWORD`;
+3. store only the password hash in `webui-admin.json`;
+4. keep the plaintext bootstrap credential in `/usr/local/etc/ntpsense/webui/.bootstrap-credential` with mode 0600;
+5. remove the bootstrap credential automatically after the administrator changes the password;
+6. do not synchronize the Web UI bootstrap credential into the privileged OS account.
+
+The OS administrator password is provisioned separately. The installer no longer advertises or sets a shared `admin/admin` credential.
+
+Static source checks currently find no `admin/admin` literal and no `DEFAULT_PASSWORD` constant in the repository.
+
+### SEC-02 validation required
+On FreeBSD-Build:
+- verify bootstrap credential length/entropy;
+- verify file mode/ownership;
+- verify `webui-admin.json` contains only a password hash;
+- verify first login succeeds with bootstrap credential;
+- verify `must_change_password` is enforced;
+- change the password;
+- verify `.bootstrap-credential` is deleted;
+- verify the old bootstrap credential no longer authenticates;
+- verify OS administrator password is independent;
+- reinstall/upgrade tests must confirm an existing credential file is never overwritten.
 
 ## SEC-03 next
 Serialize and atomically persist `webui-admin.json` and `lockout.json`: exclusive lock → read/modify → private temp file → flush/sync where supported → atomic rename → unlock. Add concurrency tests.
