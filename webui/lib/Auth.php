@@ -580,6 +580,7 @@ final class Auth
      */
     private static function provisionExternalUser(string $username, string $role): void
     {
+        return self::withCredentialLock(function () use ($username, $role): void {
         $data = self::loadAll();
         $found = false;
         foreach ($data['users'] as &$user) {
@@ -602,7 +603,9 @@ final class Auth
             ];
         }
         self::saveAll($data['users'], $data['roles']);
-    }
+    
+        });
+    
     public static function changePassword(string $newPassword): void
     {
         $username = (string) ($_SESSION['ntpsense_username'] ?? '');
@@ -641,6 +644,7 @@ final class Auth
      */
     public static function changePasswordForUser(string $username, string $newPassword): bool
     {
+        return self::withCredentialLock(function () use ($username, $newPassword): bool {
         $data = self::loadAll();
         $found = false;
         foreach ($data['users'] as &$user) {
@@ -656,7 +660,9 @@ final class Auth
             self::saveAll($data['users'], $data['roles']);
         }
         return $found;
-    }
+    
+        });
+    
     // ============================================================
     // 2FA (TOTP, RFC 6238) - kompatibel Google Authenticator/Authy/
     // Microsoft Authenticator. Native, TANPA server RADIUS eksternal -
@@ -797,6 +803,7 @@ final class Auth
      */
     public static function confirmTotpSetup(string $code): array
     {
+        return self::withCredentialLock(function () use ($code): array {
         // Gerbang KEDUA di sini juga (bukan cuma di beginTotpSetup()) -
         // pertahanan berlapis kalau ada state session lama tersisa dari
         // SEBELUM license CE aktif (mis. admin sempat pakai Pro, downgrade
@@ -827,9 +834,12 @@ final class Auth
         self::saveAll($data['users'], $data['roles']);
         unset($_SESSION['ntpsense_totp_setup_secret']);
         return $recoveryCodes;
-    }
+    
+        });
+    
     public static function disableTotp(): void
     {
+        return self::withCredentialLock(function () use (): void {
         // TIDAK digerbang lisensi - menonaktifkan 2FA (mengurangi
         // fitur, bukan menambah) harus SELALU boleh, termasuk kalau
         // license Pro sudah expired/downgrade ke CE (skenario nyata:
@@ -847,7 +857,9 @@ final class Auth
         }
         unset($user);
         self::saveAll($data['users'], $data['roles']);
-    }
+    
+        });
+    
     /**
      * Verifikasi tahap KEDUA login (kode TOTP ATAU recovery code) -
      * dipanggil SETELAH attempt() mengembalikan 'needs_2fa'. Session
@@ -865,6 +877,7 @@ final class Auth
      */
     public static function verifyTwoFactor(string $code): bool
     {
+        return self::withCredentialLock(function () use ($code): bool {
         $username = (string) ($_SESSION['ntpsense_2fa_pending_username'] ?? '');
         if ($username === '') {
             return false;
@@ -905,7 +918,9 @@ final class Auth
             return true;
         }
         return false;
-    }
+    
+        });
+    
     /** @return array<int, array{username:string, must_change_password:bool, created_at:int, role:string, auth_source:string}> */
     public static function listUsers(): array
     {
