@@ -145,6 +145,7 @@ try {
   <div class="ntp-card">
     <div class="ntp-card-header">Server Settings</div>
     <form method="post" style="padding:14px; display:flex; flex-direction:column; gap:14px;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="set_config">
       <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
         <input type="checkbox" name="enabled" value="1" <?= $cfg['enabled'] ? 'checked' : '' ?>>
@@ -176,7 +177,8 @@ try {
           <td style="font-family:monospace; font-size:12px;"><?= htmlspecialchars($c['ip_cidr']) ?></td>
           <td style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($c['description'] ?? '') ?></td>
           <td>
-            <form method="post" style="margin:0;" onsubmit="return confirm('Delete NAS/Client &quot;<?= htmlspecialchars($c['name']) ?>&quot;? Devices using this secret will stop being able to authenticate.');">
+            <form method="post" style="margin:0;" onsubmit="return confirm('Delete NAS/Client &quot;<?= htmlspecialchars($c['name']) ?>
+<?= Auth::csrfField() ?>&quot;? Devices using this secret will stop being able to authenticate.');">
               <input type="hidden" name="form" value="client_delete">
               <input type="hidden" name="id" value="<?= htmlspecialchars($c['id']) ?>">
               <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;" title="Delete"><i class="ti ti-trash" style="font-size:16px;" aria-hidden="true"></i></button>
@@ -191,6 +193,7 @@ try {
   <div class="ntp-card">
     <div class="ntp-card-header">Add NAS / Client</div>
     <form method="post" style="padding:14px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="client_add">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label>
@@ -228,7 +231,8 @@ try {
           <td><?= htmlspecialchars($u['username']) ?></td>
           <td style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($u['description'] ?? '') ?></td>
           <td>
-            <form method="post" style="margin:0;" onsubmit="return confirm('Delete user &quot;<?= htmlspecialchars($u['username']) ?>&quot;?');">
+            <form method="post" style="margin:0;" onsubmit="return confirm('Delete user &quot;<?= htmlspecialchars($u['username']) ?>
+<?= Auth::csrfField() ?>&quot;?');">
               <input type="hidden" name="form" value="user_delete">
               <input type="hidden" name="id" value="<?= htmlspecialchars($u['id']) ?>">
               <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;" title="Delete"><i class="ti ti-trash" style="font-size:16px;" aria-hidden="true"></i></button>
@@ -243,6 +247,7 @@ try {
   <div class="ntp-card">
     <div class="ntp-card-header">Add User</div>
     <form method="post" style="padding:14px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="user_add">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Username</label>
