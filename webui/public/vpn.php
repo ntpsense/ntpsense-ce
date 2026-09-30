@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 
 Auth::requireLogin();
@@ -121,6 +122,7 @@ if (!$installed) {
 
 <?php if ($activeTab === 'general' && $wgConfig): ?>
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="vpn_general">
   <div class="ntp-card">
     <div class="ntp-card-header">General</div>
@@ -222,6 +224,7 @@ if (!$installed) {
           </td>
           <td style="white-space:nowrap;">
             <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="vpn_peer_set_enabled">
               <input type="hidden" name="id" value="<?= htmlspecialchars($peer['id']) ?>">
               <?php if ($peerEnabled): ?>
@@ -236,7 +239,8 @@ if (!$installed) {
                 </button>
               <?php endif; ?>
             </form>
-            <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete peer <?= htmlspecialchars($peer['name']) ?>? The client device will lose VPN access immediately and permanently (unlike Disable, this cannot be undone — the client will need a brand new config).');">
+            <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete peer <?= htmlspecialchars($peer['name']) ?>
+<?= Auth::csrfField() ?>? The client device will lose VPN access immediately and permanently (unlike Disable, this cannot be undone — the client will need a brand new config).');">
               <input type="hidden" name="form" value="vpn_peer_delete">
               <input type="hidden" name="id" value="<?= htmlspecialchars($peer['id']) ?>">
               <button type="submit" title="Delete permanently" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -257,6 +261,7 @@ if (!$installed) {
     </p>
 
     <form method="post" style="padding:14px; border-top:1px solid #e5e7eb; display:flex; align-items:end; gap:12px;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="vpn_peer_add">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Peer name</label>

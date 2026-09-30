@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 require_once __DIR__ . '/../lib/license.php';
 Auth::requireLogin();
@@ -296,6 +297,8 @@ require __DIR__ . '/../templates/layout_header.php';
               <details style="display:inline-block;">
                 <summary style="cursor:pointer; display:inline-block; color:#374151; font-size:12px;">Edit</summary>
                 <form method="post" style="margin:8px 0 0; display:flex; gap:8px; align-items:end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
                   <input type="hidden" name="form" value="gateway_update">
                   <input type="hidden" name="name" value="<?= htmlspecialchars($g['name']) ?>">
                   <div>
@@ -321,7 +324,9 @@ require __DIR__ . '/../templates/layout_header.php';
                   <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:6px 12px; font-size:12px; border-radius:6px;">Save</button>
                 </form>
               </details>
-              <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete gateway &quot;<?= htmlspecialchars($g['name']) ?>&quot;?');">
+              <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete gateway &quot;<?= htmlspecialchars($g['name']) ?>
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>&quot;?');">
                 <input type="hidden" name="form" value="gateway_delete">
                 <input type="hidden" name="name" value="<?= htmlspecialchars($g['name']) ?>">
                 <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px; margin-left:6px;">
@@ -354,6 +359,8 @@ require __DIR__ . '/../templates/layout_header.php';
       </p>
     <?php else: ?>
       <form method="post" style="padding:14px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="gateway_create">
         <div>
           <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label>
@@ -441,6 +448,8 @@ require __DIR__ . '/../templates/layout_header.php';
           <summary style="cursor:pointer; color:#374151; font-size:12px;">Edit members</summary>
           <?php $rowsId = 'edit-member-rows-' . preg_replace('/[^a-zA-Z0-9_]/', '-', $grp['name']); ?>
           <form method="post" style="margin:10px 0 0;">
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="group_update">
             <input type="hidden" name="name" value="<?= htmlspecialchars($grp['name']) ?>">
             <input type="hidden" name="routing_mode" value="<?= htmlspecialchars($grp['routing_mode'] ?? 'static') ?>">
@@ -470,17 +479,23 @@ require __DIR__ . '/../templates/layout_header.php';
       <div style="padding:0 14px 14px; display:flex; gap:10px; flex-wrap:wrap;">
         <?php if ($grp['is_system_default']): ?>
           <form method="post" style="margin:0;">
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="group_clear_default">
             <button type="submit" style="background:none; border:1px solid #d1d5db; padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;">Unset as System Default</button>
           </form>
         <?php else: ?>
-          <form method="post" style="margin:0;" onsubmit="return confirm('Set &quot;<?= htmlspecialchars($grp['name']) ?>&quot; as the System Default Gateway? This controls where NTPSense\'s own traffic exits.');">
+          <form method="post" style="margin:0;" onsubmit="return confirm('Set &quot;<?= htmlspecialchars($grp['name']) ?>
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>&quot; as the System Default Gateway? This controls where NTPSense\'s own traffic exits.');">
             <input type="hidden" name="form" value="group_set_default">
             <input type="hidden" name="name" value="<?= htmlspecialchars($grp['name']) ?>">
             <button type="submit" style="background:none; border:1px solid #d1d5db; padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;">Set as System Default</button>
           </form>
         <?php endif; ?>
-        <form method="post" style="margin:0;" onsubmit="return confirm('Delete group &quot;<?= htmlspecialchars($grp['name']) ?>&quot;?');">
+        <form method="post" style="margin:0;" onsubmit="return confirm('Delete group &quot;<?= htmlspecialchars($grp['name']) ?>
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>&quot;?');">
           <input type="hidden" name="form" value="group_delete">
           <input type="hidden" name="name" value="<?= htmlspecialchars($grp['name']) ?>">
           <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; font-size:12px; padding:0;">Delete this group</button>
@@ -495,6 +510,8 @@ require __DIR__ . '/../templates/layout_header.php';
       <p style="padding:12px 14px; font-size:12px; color:#6b7280;">Add at least one gateway on the Gateways tab first.</p>
     <?php else: ?>
       <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="group_create">
         <div style="margin-bottom:12px;">
           <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Group name</label>
@@ -608,6 +625,8 @@ require __DIR__ . '/../templates/layout_header.php';
       not per-gateway. Takes effect on the next monitoring cycle automatically, no daemon restart needed.
     </p>
     <form method="post" style="padding:14px; display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="settings_update">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Check interval (seconds)</label>

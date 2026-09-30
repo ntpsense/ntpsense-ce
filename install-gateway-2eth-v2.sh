@@ -523,33 +523,40 @@ fi
 log "2eth v2 install complete: LAN1 (dual-purpose) + WAN1 + anti-lockout rule + swap + packages + ntpsenseweb group + webui bootstrap + ntpsense-configd + lighttpd/php-fpm (Unix socket) all configured."
 
 # ============================================================
-# 17. Trigger bootstrap akun admin Web UI - Auth::ensureBootstrapped()
-# dipanggil LAZY saat halaman PERTAMA diakses (bukan saat install) -
-# webui-admin.json BELUM ADA sampai ada request masuk. Panggil
-# LANGSUNG via PHP CLI (BUKAN 'fetch' HTTPS) - RCA nyata (ditemukan
-# dari test hardware fisik): 'fetch --no-verify-peer' ke sertifikat
-# self-signed GAGAL DIAM-DIAM (exit non-zero yang di-'|| true'-kan),
-# webui-admin.json tetap tidak pernah tercipta. Panggil PHP langsung
-# sepenuhnya menghindari urusan SSL/sertifikat - jauh lebih reliable.
+# 17. First-boot Web UI administrator bootstrap
+#
+# SECURITY: NEVER ship a static administrator password. Generate a
+# one-time random bootstrap credential on the gateway and pass it to
+# Auth::ensureBootstrapped() through the process environment only.
+# The Web UI stores only the password hash.
 # ============================================================
-log "Triggering Web UI first-boot bootstrap (creates default admin account)..."
-php -r 'require "/usr/local/www/ntpsense/lib/Auth.php"; Auth::ensureBootstrapped();' 2>&1 || true
+BOOTSTRAP_CRED_FILE="/usr/local/etc/ntpsense/webui/.bootstrap-credential"
+if [ ! -f "${BOOTSTRAP_CRED_FILE}" ]; then
+    umask 077
+    BOOTSTRAP_PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | cut -c1-32)
+    if [ ${#BOOTSTRAP_PASSWORD} -lt 32 ]; then
+        fatal "Could not generate a sufficiently strong bootstrap password."
+    fi
+    printf '%s\n' "${BOOTSTRAP_PASSWORD}" > "${BOOTSTRAP_CRED_FILE}"
+    chmod 600 "${BOOTSTRAP_CRED_FILE}"
+    chown www:ntpsenseweb "${BOOTSTRAP_CRED_FILE}"
+else
+    BOOTSTRAP_PASSWORD=$(cat "${BOOTSTRAP_CRED_FILE}")
+fi
+
+log "Triggering Web UI first-boot bootstrap with a generated credential..."
+if ! NTPSENSE_BOOTSTRAP_PASSWORD="${BOOTSTRAP_PASSWORD}" php -r 'require "/usr/local/www/ntpsense/lib/Auth.php"; Auth::ensureBootstrapped();'; then
+    fatal "Web UI administrator bootstrap failed."
+fi
+unset BOOTSTRAP_PASSWORD
+
 if [ -f /usr/local/etc/ntpsense/webui/webui-admin.json ]; then
-    log "CHECKPOINT 17b: Web UI admin account bootstrapped"
-    # RCA NYATA (ditemukan dari test end-to-end - ganti password Web UI
-    # gagal 'Permission denied'): panggilan PHP CLI di atas jalan SEBAGAI
-    # ROOT (script ini sendiri jalan sebagai root via rc.local), jadi
-    # webui-admin.json yang tercipta ownership-nya root, BUKAN www -
-    # PHP-FPM (jalan sebagai www) kemudian TIDAK BISA menulis ulang file
-    # itu sendiri (ganti password, dst) meski dia member grup
-    # ntpsenseweb yang benar di direktorinya. Fix: paksa ownership balik
-    # ke www:ntpsenseweb SETELAH bootstrap, sebelum Web UI genuinely
-    # dipakai pertama kali.
     chown www:ntpsenseweb /usr/local/etc/ntpsense/webui/webui-admin.json
     chmod 640 /usr/local/etc/ntpsense/webui/webui-admin.json
-    log "CHECKPOINT 17c: webui-admin.json ownership dikoreksi ke www:ntpsenseweb"
+    log "CHECKPOINT 17b: Web UI administrator account bootstrapped with generated credential"
+    log "Bootstrap credential is stored at ${BOOTSTRAP_CRED_FILE}; delete it after the first successful password change."
 else
-    log "WARNING: webui-admin.json still not present after bootstrap trigger - console account sync (next step) will be skipped."
+    fatal "webui-admin.json was not created during bootstrap."
 fi
 
 # ============================================================
@@ -594,15 +601,9 @@ if [ -x /usr/local/sbin/ntpsense-sync-os-accounts.sh ] && [ -f /usr/local/etc/nt
     sh /usr/local/sbin/ntpsense-sync-os-accounts.sh || log "WARNING: console account sync failed - run it manually later."
     log "CHECKPOINT 19: console accounts synced - Administrator can log in via SSH/console using the same Web UI password"
 
-    # Set password OS awal untuk 'admin' SAMA dengan default Web UI
-    # ("admin") - satu-satunya password yang genuinely KITA TAHU
-    # nilainya di titik ini (bootstrap SELALU pakai default itu) -
-    # supaya console juga langsung bisa dipakai tanpa 'passwd' manual,
-    # konsisten permintaan "sekali install sudah OK semua".
-    if pw usershow admin > /dev/null 2>&1; then
-        printf 'admin' | pw usermod admin -h 0
-        log "CHECKPOINT 19b: initial console password for 'admin' set to match Web UI default (admin/admin)"
-    fi
+    # SECURITY: Never synchronize the Web UI bootstrap credential
+    # into the privileged OS administrator account.
+    log "CHECKPOINT 19b: OS admin password is NOT synchronized with Web UI"
 else
     log "Console account sync skipped (scripts or webui-admin.json not ready) - run manually later:"
     log "  sh /usr/local/sbin/ntpsense-sync-os-accounts.sh"
@@ -612,6 +613,5 @@ date > "${INSTALL_MARKER}"
 log "CHECKPOINT 20: install marker written"
 log ""
 log "WEB UI ACCESS: https://${LAN1_GATEWAY_IP}/ from a device connected to ${LAN1_IF}"
-log "Default login: admin / admin (you will be required to change the password on first login)"
-log "CONSOLE/SSH ACCESS: same 'admin' / 'admin' credentials - console menu shows"
-log "the full Administrator menu automatically."
+log "Web UI login: admin / generated bootstrap credential (see /usr/local/etc/ntpsense/webui/.bootstrap-credential) - change it immediately on first login"
+log "CONSOLE/SSH ACCESS: provision the OS administrator password separately; it is NOT shared with the Web UI."

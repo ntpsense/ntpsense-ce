@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 // ExternalAuth.php SUDAH ter-include lewat Auth.php sendiri (require_once
 // di dalamnya) - baris require terpisah di sini yang SEBELUMNYA ada
@@ -522,6 +523,7 @@ require __DIR__ . '/../templates/layout_header.php';
 
 <?php if ($info): ?>
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="system_settings">
   <div class="ntp-card">
     <div class="ntp-card-header">System</div>
@@ -561,6 +563,7 @@ require __DIR__ . '/../templates/layout_header.php';
     DNS before they can be reached at all.
   </p>
   <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="set_dns_servers">
     <textarea name="dns_servers" rows="3" style="max-width:280px; font-family:monospace; font-size:12px;"><?= htmlspecialchars(implode("\n", $dnsServers)) ?></textarea>
     <p style="font-size:12px; color:#6b7280; margin:6px 0 10px;">
@@ -595,6 +598,7 @@ require __DIR__ . '/../templates/layout_header.php';
       <?= htmlspecialchars($restoreWarning['message']) ?>
     </p>
     <form method="post" style="margin:0;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="backup_restore">
       <input type="hidden" name="filename" value="<?= htmlspecialchars($restoreWarning['filename']) ?>">
       <input type="hidden" name="confirm" value="1">
@@ -630,6 +634,7 @@ require __DIR__ . '/../templates/layout_header.php';
             <i class="ti ti-download" style="font-size:16px;" aria-hidden="true"></i>
           </a>
           <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Restore this backup? Current configuration will be overwritten.');">
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="backup_restore">
             <input type="hidden" name="filename" value="<?= htmlspecialchars($b['filename']) ?>">
             <button type="submit" title="Restore" style="background:none; border:none; cursor:pointer; color:#1a7f4b; padding:4px;">
@@ -637,6 +642,7 @@ require __DIR__ . '/../templates/layout_header.php';
             </button>
           </form>
           <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete this backup?');">
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="backup_delete">
             <input type="hidden" name="filename" value="<?= htmlspecialchars($b['filename']) ?>">
             <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -651,11 +657,13 @@ require __DIR__ . '/../templates/layout_header.php';
   </div>
 
   <form method="post" style="padding:14px; border-top:1px solid #e5e7eb;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="backup_create">
     <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Create backup now</button>
   </form>
 
   <form method="post" enctype="multipart/form-data" style="padding:14px; border-top:1px solid #e5e7eb; display:flex; gap:12px; align-items:end;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="backup_upload">
     <div>
       <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Upload a backup file</label>
@@ -718,6 +726,7 @@ require __DIR__ . '/../templates/layout_header.php';
     uploading a certificate from a real CA below.
   </p>
   <form method="post" style="padding:14px;" onsubmit="return confirm('Regenerate the self-signed certificate now? lighttpd will restart, briefly interrupting the Web UI (usually a few seconds).');">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="cert_regenerate">
     <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Regenerate now</button>
   </form>
@@ -731,6 +740,7 @@ require __DIR__ . '/../templates/layout_header.php';
     verified to actually match each other before anything is applied - a mismatched pair is rejected outright.
   </p>
   <form method="post" enctype="multipart/form-data" style="padding:14px; display:flex; gap:12px; align-items:end; flex-wrap:wrap;" onsubmit="return confirm('Apply this certificate? lighttpd will restart, briefly interrupting the Web UI (usually a few seconds).');">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="cert_upload">
     <div>
       <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Certificate file (.crt / .pem)</label>
@@ -799,6 +809,7 @@ require __DIR__ . '/../templates/layout_header.php';
             <span style="font-size:12px; color:#6b7280;" title="Role is synced automatically from the RADIUS/LDAP group mapping on every login - edit the mapping on the Authentication tab instead."><?= htmlspecialchars($u['role']) ?></span>
           <?php else: ?>
             <form method="post" style="margin:0; display:flex; gap:6px; align-items:center;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="user_change_role">
               <input type="hidden" name="username" value="<?= htmlspecialchars($u['username']) ?>">
               <select name="role" id="<?= $selectId ?>" style="font-size:12px;" <?= $isAdminRow ? 'disabled' : '' ?>
@@ -831,6 +842,7 @@ require __DIR__ . '/../templates/layout_header.php';
           <details style="display:inline-block;">
             <summary style="cursor:pointer; display:inline-block; color:#374151; font-size:12px;">Reset password</summary>
             <form method="post" style="margin:8px 0 0; display:flex; gap:8px; align-items:end;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="user_reset_password">
               <input type="hidden" name="username" value="<?= htmlspecialchars($u['username']) ?>">
               <input type="password" name="new_password" placeholder="New temporary password" minlength="8" required style="font-size:12px;">
@@ -839,7 +851,8 @@ require __DIR__ . '/../templates/layout_header.php';
           </details>
           <?php endif; ?>
           <?php if ($u['username'] !== $currentUsername && count($allUsers) > 1): ?>
-            <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete admin account &quot;<?= htmlspecialchars($u['username']) ?>&quot;?');">
+            <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete admin account &quot;<?= htmlspecialchars($u['username']) ?>
+<?= Auth::csrfField() ?>&quot;?');">
               <input type="hidden" name="form" value="user_delete">
               <input type="hidden" name="username" value="<?= htmlspecialchars($u['username']) ?>">
               <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px; margin-left:6px;">
@@ -858,6 +871,7 @@ require __DIR__ . '/../templates/layout_header.php';
 <div class="ntp-card">
   <div class="ntp-card-header">Add admin account</div>
   <form method="post" style="padding:14px; display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="user_create">
     <div>
       <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Username</label>
@@ -916,6 +930,7 @@ require __DIR__ . '/../templates/layout_header.php';
         Manual entry key: <code style="font-size:13px;"><?= htmlspecialchars($totpSetup['secret']) ?></code>
       </p>
       <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="totp_setup_confirm">
         <div>
           <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Current 6-digit code</label>
@@ -924,6 +939,7 @@ require __DIR__ . '/../templates/layout_header.php';
         <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Confirm and enable</button>
       </form>
       <form method="post" style="margin-top:8px;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="totp_setup_cancel">
         <button type="submit" style="background:none; border:none; color:#6b7280; font-size:12px; cursor:pointer; text-decoration:underline; padding:0;">Cancel setup</button>
       </form>
@@ -940,6 +956,7 @@ require __DIR__ . '/../templates/layout_header.php';
     <div style="padding:12px 14px;">
       <span class="ntp-badge ntp-badge-success">Enabled</span>
       <form method="post" style="margin-top:10px;" onsubmit="return confirm('Disable two-factor authentication for your account? You will only need your password to log in afterward.');">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="totp_disable">
         <button type="submit" style="background:none; border:1px solid #d1d5db; padding:6px 14px; font-size:12px; border-radius:6px; cursor:pointer; color:#b3261e;">Disable 2FA</button>
       </form>
@@ -948,6 +965,7 @@ require __DIR__ . '/../templates/layout_header.php';
     <div style="padding:12px 14px;">
       <span class="ntp-badge ntp-badge-muted">Not enabled</span>
       <form method="post" style="margin-top:10px;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="totp_setup_begin">
         <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Enable 2FA</button>
       </form>
@@ -981,6 +999,7 @@ require __DIR__ . '/../templates/layout_header.php';
 <div class="ntp-card" style="margin-bottom:16px;">
   <div class="ntp-card-header"><?= htmlspecialchars($role['name']) ?></div>
   <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="role_update">
     <input type="hidden" name="role_name" value="<?= htmlspecialchars($role['name']) ?>">
     <table class="ntp-table" style="margin-bottom:12px;">
@@ -1000,7 +1019,8 @@ require __DIR__ . '/../templates/layout_header.php';
     </table>
     <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Save</button>
   </form>
-  <form method="post" style="padding:0 14px 14px;" onsubmit="return confirm('Delete role &quot;<?= htmlspecialchars($role['name']) ?>&quot;? Any user still assigned this role must be reassigned first.');">
+  <form method="post" style="padding:0 14px 14px;" onsubmit="return confirm('Delete role &quot;<?= htmlspecialchars($role['name']) ?>
+<?= Auth::csrfField() ?>&quot;? Any user still assigned this role must be reassigned first.');">
     <input type="hidden" name="form" value="role_delete">
     <input type="hidden" name="role_name" value="<?= htmlspecialchars($role['name']) ?>">
     <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; font-size:12px; padding:0;">Delete this role</button>
@@ -1011,6 +1031,7 @@ require __DIR__ . '/../templates/layout_header.php';
 <div class="ntp-card">
   <div class="ntp-card-header">Add role</div>
   <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="role_create">
     <div style="margin-bottom:12px;">
       <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Role name</label>
@@ -1064,6 +1085,7 @@ require __DIR__ . '/../templates/layout_header.php';
 <?php endif; ?>
 
 <form method="post" style="margin-bottom:16px;">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="auth_toggle">
   <div class="ntp-card">
     <div class="ntp-card-header">Enable</div>
@@ -1098,6 +1120,7 @@ require __DIR__ . '/../templates/layout_header.php';
             <details style="display:inline-block;">
               <summary style="cursor:pointer; color:#374151; font-size:12px;">Test</summary>
               <form method="post" style="margin:8px 0 0; display:flex; gap:6px; align-items:end;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="auth_test_radius">
                 <input type="hidden" name="index" value="<?= $i ?>">
                 <input type="text" name="test_username" placeholder="username" required style="font-size:11px; width:100px;">
@@ -1106,6 +1129,7 @@ require __DIR__ . '/../templates/layout_header.php';
               </form>
             </details>
             <form method="post" style="display:inline; margin-left:6px;" onsubmit="return confirm('Remove this RADIUS server?');">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="radius_server_delete">
               <input type="hidden" name="index" value="<?= $i ?>">
               <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;"><i class="ti ti-trash" style="font-size:16px;" aria-hidden="true"></i></button>
@@ -1120,6 +1144,7 @@ require __DIR__ . '/../templates/layout_header.php';
     <p style="padding:12px 14px; font-size:12px; color:#6b7280;">No RADIUS servers configured yet.</p>
   <?php endif; ?>
   <form method="post" style="padding:14px; border-top:1px solid #e5e7eb; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="radius_server_add">
     <div><label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label><input type="text" name="name" placeholder="Corporate RADIUS" required style="width:160px;"></div>
     <div><label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Host</label><input type="text" name="host" placeholder="10.0.0.5" required style="width:140px;"></div>
@@ -1152,6 +1177,7 @@ require __DIR__ . '/../templates/layout_header.php';
             <details style="display:inline-block;">
               <summary style="cursor:pointer; color:#374151; font-size:12px;">Test</summary>
               <form method="post" style="margin:8px 0 0; display:flex; gap:6px; align-items:end;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="auth_test_ldap">
                 <input type="hidden" name="index" value="<?= $i ?>">
                 <input type="text" name="test_username" placeholder="username" required style="font-size:11px; width:100px;">
@@ -1160,6 +1186,7 @@ require __DIR__ . '/../templates/layout_header.php';
               </form>
             </details>
             <form method="post" style="display:inline; margin-left:6px;" onsubmit="return confirm('Remove this LDAP server?');">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="ldap_server_delete">
               <input type="hidden" name="index" value="<?= $i ?>">
               <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;"><i class="ti ti-trash" style="font-size:16px;" aria-hidden="true"></i></button>
@@ -1174,6 +1201,7 @@ require __DIR__ . '/../templates/layout_header.php';
     <p style="padding:12px 14px; font-size:12px; color:#6b7280;">No LDAP servers configured yet.</p>
   <?php endif; ?>
   <form method="post" style="padding:14px; border-top:1px solid #e5e7eb; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="ldap_server_add">
     <div><label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label><input type="text" name="name" placeholder="Corporate LDAP" required style="width:150px;"></div>
     <div><label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Host</label><input type="text" name="host" placeholder="10.0.0.10" required style="width:130px;"></div>
@@ -1204,6 +1232,7 @@ require __DIR__ . '/../templates/layout_header.php';
           <td><?= htmlspecialchars($m['local_role']) ?></td>
           <td>
             <form method="post" style="margin:0;" onsubmit="return confirm('Remove this mapping?');">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="group_map_delete">
               <input type="hidden" name="index" value="<?= $i ?>">
               <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;"><i class="ti ti-trash" style="font-size:16px;" aria-hidden="true"></i></button>
@@ -1218,6 +1247,7 @@ require __DIR__ . '/../templates/layout_header.php';
     <p style="padding:12px 14px; font-size:12px; color:#6b7280;">No mappings yet - external logins will be rejected until at least one exists.</p>
   <?php endif; ?>
   <form method="post" style="padding:14px; border-top:1px solid #e5e7eb; display:flex; gap:10px; align-items:end;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="group_map_add">
     <div><label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">External group name</label><input type="text" name="external_group" placeholder="VPNAdmins" required style="width:200px;"></div>
     <div>
@@ -1273,6 +1303,7 @@ require __DIR__ . '/../templates/layout_header.php';
     preserved. The gateway is unreachable for a minute or two while it comes back up.
   </p>
   <form method="post" style="padding:14px;" onsubmit="return confirm('Reboot the gateway now? It will be unreachable for a minute or two.');">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="system_reboot">
     <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Reboot now</button>
   </form>
@@ -1287,6 +1318,7 @@ require __DIR__ . '/../templates/layout_header.php';
     fine. (Same concept as pfSense's "reroot" or Sangfor's "Restart Service".)
   </p>
   <form method="post" style="padding:14px;" onsubmit="return confirm('Restart all services now? Active connections through the proxy/VPN may briefly drop.');">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="system_restart_services">
     <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Restart all services</button>
   </form>
@@ -1315,6 +1347,7 @@ require __DIR__ . '/../templates/layout_header.php';
     any chance you'll want this configuration back.
   </div>
   <form method="post" style="padding:0 14px 14px;" onsubmit="return confirm('This is your last confirmation from the browser - the gateway will wipe its configuration and reboot. Continue?');">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="system_factory_reset">
     <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">
       Type <code>RESET</code> (all caps) to enable the button below
@@ -1357,6 +1390,7 @@ require __DIR__ . '/../templates/layout_header.php';
       <?php else: ?>
         <span class="ntp-badge ntp-badge-danger">Not running</span>
         <form method="post" style="margin-top:6px;">
+<?= Auth::csrfField() ?>
           <input type="hidden" name="form" value="enable_ntp">
           <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:6px 12px; font-size:12px; border-radius:6px;">Enable NTP</button>
         </form>
@@ -1372,6 +1406,7 @@ require __DIR__ . '/../templates/layout_header.php';
     scheduled rules, which are based on the underlying clock, not the timezone label.
   </p>
   <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="set_timezone">
     <?php
     $tzByRegion = [];
@@ -1412,6 +1447,7 @@ require __DIR__ . '/../templates/layout_header.php';
       computer's timezone if they're different.
     </p>
     <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="set_manual_time">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Date and time</label>
@@ -1497,7 +1533,8 @@ require __DIR__ . '/../templates/layout_header.php';
         <td style="font-size:11px; color:#6b7280;"><?= $k['created_at'] ? htmlspecialchars(date('Y-m-d H:i', (int) $k['created_at'])) : '—' ?></td>
         <td style="font-size:11px; color:#6b7280;"><?= $k['last_used_at'] ? htmlspecialchars(date('Y-m-d H:i', (int) $k['last_used_at'])) : 'Never' ?></td>
         <td>
-          <form method="post" style="margin:0;" onsubmit="return confirm('Revoke API key &quot;<?= htmlspecialchars($k['name']) ?>&quot;? Anything still using it will stop working immediately.');">
+          <form method="post" style="margin:0;" onsubmit="return confirm('Revoke API key &quot;<?= htmlspecialchars($k['name']) ?>
+<?= Auth::csrfField() ?>&quot;? Anything still using it will stop working immediately.');">
             <input type="hidden" name="form" value="apikey_revoke">
             <input type="hidden" name="id" value="<?= htmlspecialchars($k['id']) ?>">
             <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;" title="Revoke">
@@ -1515,6 +1552,7 @@ require __DIR__ . '/../templates/layout_header.php';
 <div class="ntp-card">
   <div class="ntp-card-header">Create API Key</div>
   <form method="post" style="padding:14px; display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="apikey_create">
     <div>
       <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label>

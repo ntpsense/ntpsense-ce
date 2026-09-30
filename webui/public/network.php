@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 
 Auth::requireLogin();
@@ -552,6 +553,7 @@ function renderZoneRow(string $zoneLabel, ?array $zone, string $description, boo
           </a>
           <?php if (!$isMgmt): ?>
             <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="toggle_port">
               <input type="hidden" name="interface" value="<?= htmlspecialchars($iface) ?>">
               <input type="hidden" name="enabled" value="<?= $enabled ? '0' : '1' ?>">
@@ -561,7 +563,8 @@ function renderZoneRow(string $zoneLabel, ?array $zone, string $description, boo
             </form>
           <?php endif; ?>
           <?php if ($isOpt): ?>
-            <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Reset interface <?= htmlspecialchars($iface) ?> to default? This clears its IP/subnet, DHCP server config, Role, Alias, AND all custom Firewall rules for this interface - like Cisco\'s &quot;default interface&quot; command. Port enable/disable state is not affected. This cannot be undone.');">
+            <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Reset interface <?= htmlspecialchars($iface) ?>
+<?= Auth::csrfField() ?> to default? This clears its IP/subnet, DHCP server config, Role, Alias, AND all custom Firewall rules for this interface - like Cisco\'s &quot;default interface&quot; command. Port enable/disable state is not affected. This cannot be undone.');">
               <input type="hidden" name="form" value="reset_interface">
               <input type="hidden" name="interface" value="<?= htmlspecialchars($iface) ?>">
               <button type="submit" title="Reset interface to default (clears IP, DHCP, Role, Alias, custom rules)" style="background:none; border:none; cursor:pointer; color:#9a5b00; padding:4px;">
@@ -672,6 +675,7 @@ require __DIR__ . '/../templates/layout_header.php';
             </div>
             <?php endif; ?>
             <form method="post" style="margin-top:10px;">
+<?= Auth::csrfField() ?>
               <?php foreach ($subnetWarning['pending'] as $key => $value): ?>
                 <?php if ($key === 'confirm') continue; // ditimpa eksplisit di bawah ?>
                 <input type="hidden" name="<?= htmlspecialchars($key) ?>" value="<?= htmlspecialchars((string) $value) ?>">
@@ -689,6 +693,7 @@ require __DIR__ . '/../templates/layout_header.php';
         $dhcpEnabled = $dhcpCfg['enabled'] ?? false;
         ?>
         <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
           <input type="hidden" name="form" value="update_interface">
           <input type="hidden" name="interface" value="<?= htmlspecialchars($managingInterface) ?>">
 
@@ -1077,7 +1082,8 @@ require __DIR__ . '/../templates/layout_header.php';
                 <a href="?iftab=lagg&edit_lagg=<?= urlencode($g['interface']) ?>" title="Edit (change protocol or member ports)" style="color:#374151; padding:4px; display:inline-block;">
                   <i class="ti ti-pencil" style="font-size:16px;" aria-hidden="true"></i>
                 </a>
-                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete link aggregation group <?= htmlspecialchars($g['interface']) ?>? Member ports will need to be reassigned individually afterward if you want to use them again.');">
+                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete link aggregation group <?= htmlspecialchars($g['interface']) ?>
+<?= Auth::csrfField() ?>? Member ports will need to be reassigned individually afterward if you want to use them again.');">
                   <input type="hidden" name="form" value="lagg_delete">
                   <input type="hidden" name="interface" value="<?= htmlspecialchars($g['interface']) ?>">
                   <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -1120,6 +1126,7 @@ require __DIR__ . '/../templates/layout_header.php';
         </p>
       <?php else: ?>
         <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
           <input type="hidden" name="form" value="<?= $editingLagg ? 'lagg_edit' : 'lagg_create' ?>">
           <?php if ($editingLagg): ?>
             <input type="hidden" name="interface" value="<?= htmlspecialchars($editingLagg['interface']) ?>">
@@ -1203,7 +1210,8 @@ require __DIR__ . '/../templates/layout_header.php';
               </td>
               <td>
                 <?php if (empty($lease['is_static'])): ?>
-                  <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Make <?= htmlspecialchars($lease['ip']) ?> a permanent static reservation for this device?');">
+                  <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Make <?= htmlspecialchars($lease['ip']) ?>
+<?= Auth::csrfField() ?> a permanent static reservation for this device?');">
                     <input type="hidden" name="form" value="dhcp_make_static">
                     <input type="hidden" name="interface" value="<?= htmlspecialchars($lease['interface'] ?? '') ?>">
                     <input type="hidden" name="mac" value="<?= htmlspecialchars($lease['mac']) ?>">
@@ -1214,7 +1222,8 @@ require __DIR__ . '/../templates/layout_header.php';
                     </button>
                   </form>
                 <?php else: ?>
-                  <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Remove static reservation for <?= htmlspecialchars($lease['ip']) ?>? This device will get a new dynamic IP next time.');">
+                  <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Remove static reservation for <?= htmlspecialchars($lease['ip']) ?>
+<?= Auth::csrfField() ?>? This device will get a new dynamic IP next time.');">
                     <input type="hidden" name="form" value="dhcp_remove_reservation">
                     <input type="hidden" name="mac" value="<?= htmlspecialchars($lease['mac']) ?>">
                     <button type="submit" title="Remove Reservation" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -1279,7 +1288,8 @@ require __DIR__ . '/../templates/layout_header.php';
               </td>
               <td>
                 <?php if (empty($lo['locked'])): ?>
-                  <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete loopback interface <?= htmlspecialchars($lo['interface']) ?>?');">
+                  <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete loopback interface <?= htmlspecialchars($lo['interface']) ?>
+<?= Auth::csrfField() ?>?');">
                     <input type="hidden" name="form" value="loopback_delete">
                     <input type="hidden" name="interface" value="<?= htmlspecialchars($lo['interface']) ?>">
                     <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -1301,6 +1311,7 @@ require __DIR__ . '/../templates/layout_header.php';
     <div class="ntp-card">
       <div class="ntp-card-header">Create Loopback Interface</div>
       <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="loopback_create">
         <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
           <div style="flex:1; min-width:160px;">
@@ -1366,7 +1377,8 @@ require __DIR__ . '/../templates/layout_header.php';
                 <?php endif; ?>
               </td>
               <td>
-                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Remove VLAN <?= htmlspecialchars((string) $entry['id']) ?> (<?= htmlspecialchars($entry['name']) ?>) from the VLAN Database?');">
+                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Remove VLAN <?= htmlspecialchars((string) $entry['id']) ?>
+<?= Auth::csrfField() ?> (<?= htmlspecialchars($entry['name']) ?>) from the VLAN Database?');">
                   <input type="hidden" name="form" value="vlan_db_delete">
                   <input type="hidden" name="id" value="<?= htmlspecialchars((string) $entry['id']) ?>">
                   <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -1385,6 +1397,7 @@ require __DIR__ . '/../templates/layout_header.php';
     <div class="ntp-card">
       <div class="ntp-card-header">Add VLAN</div>
       <form method="post" style="padding:14px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="vlan_db_create">
         <div style="width:140px;">
           <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">VLAN ID</label>
@@ -1439,7 +1452,8 @@ require __DIR__ . '/../templates/layout_header.php';
                 <a href="?iftab=physical&manage=<?= urlencode($v['interface']) ?>" title="Edit - assign Name, subnet, Role, DHCP" style="color:#374151; padding:4px; display:inline-block;">
                   <i class="ti ti-pencil" style="font-size:16px;" aria-hidden="true"></i>
                 </a>
-                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete VLAN interface <?= htmlspecialchars($v['interface']) ?> (tag <?= htmlspecialchars((string) $v['tag']) ?>)?');">
+                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete VLAN interface <?= htmlspecialchars($v['interface']) ?>
+<?= Auth::csrfField() ?> (tag <?= htmlspecialchars((string) $v['tag']) ?>)?');">
                   <input type="hidden" name="form" value="vlan_delete">
                   <input type="hidden" name="interface" value="<?= htmlspecialchars($v['interface']) ?>">
                   <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -1470,6 +1484,7 @@ require __DIR__ . '/../templates/layout_header.php';
         </p>
       <?php else: ?>
         <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
           <input type="hidden" name="form" value="vlan_create">
           <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
             <div style="width:220px;">

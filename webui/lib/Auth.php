@@ -66,7 +66,6 @@ final class Auth
     private const LOCKOUT_THRESHOLD = 5;
     private const LOCKOUT_SECONDS = 900; // 15 menit
     private const DEFAULT_USERNAME = 'admin';
-    private const DEFAULT_PASSWORD = 'admin';
     // "Administrator" TIDAK PERNAH disimpan sebagai objek role di file -
     // ini nama cadangan (reserved), diperlakukan sebagai kasus khusus di
     // seluruh kode: akses penuh ke SEMUA kategori TERMASUK 'system',
@@ -84,6 +83,67 @@ final class Auth
         'vpn', 'ipsec', 'services', 'system_logs', 'package_manager',
     ];
     private const PERMISSION_LEVELS = ['none', 'read', 'write'];
+    private const CSRF_SESSION_KEY = 'ntpsense_csrf_token';
+
+    /**
+     * Start the Web UI session with defensive cookie attributes.
+     * Must be called before any session_start() call in public entrypoints.
+     */
+    public static function startSession(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return;
+        }
+        ini_set('session.use_strict_mode', '1');
+        $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        session_set_cookie_params([
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => 'Strict',
+            'path' => '/',
+        ]);
+        session_start();
+    }
+
+    /** Return the per-session CSRF token, generating it with CSPRNG when needed. */
+    public static function csrfToken(): string
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            self::startSession();
+        }
+        $token = (string) ($_SESSION[self::CSRF_SESSION_KEY] ?? '');
+        if ($token === '') {
+            $token = bin2hex(random_bytes(32));
+            $_SESSION[self::CSRF_SESSION_KEY] = $token;
+        }
+        return $token;
+    }
+
+    /** Render a hidden CSRF field for HTML forms. */
+    public static function csrfField(): string
+    {
+        return '<input type="hidden" name="_csrf" value="'
+            . htmlspecialchars(self::csrfToken(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '">';
+    }
+
+    /** Reject mutating requests without a valid same-session CSRF token. */
+    public static function requireCsrf(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return;
+        }
+        $expected = self::csrfToken();
+        $provided = (string) ($_POST['_csrf'] ?? '');
+        if ($provided === '' || !hash_equals($expected, $provided)) {
+            AuditLog::logAccess('security', (string) ($_POST['form'] ?? '(unnamed form)'), 'denied - invalid CSRF token');
+            http_response_code(403);
+            echo '<!DOCTYPE html><html><body style="font-family:sans-serif; padding:40px; text-align:center;">'
+                . '<h2>Request rejected</h2><p>Invalid or missing CSRF token. Please reload the page and try again.</p>'
+                . '<p><a href="/login.php">Back to login</a></p></body></html>';
+            exit;
+        }
+    }
     /**
      * Gerbang lisensi Pro dipakai bareng di createUser()/createRole()/
      * beginTotpSetup() - satu titik kebenaran, bukan dicek ulang
@@ -104,7 +164,7 @@ final class Auth
             );
         }
     }
-    public static function ensureBootstrapped(): void
+    public static function ensureBootstrapped(?string $bootstrapPassword = null): void
     {
         if (file_exists(self::CREDENTIAL_FILE)) {
             self::migrateIfNeeded();
@@ -114,11 +174,21 @@ final class Auth
         if (!is_dir($dir)) {
             mkdir($dir, 0750, true);
         }
+        $bootstrapPassword ??= (string) getenv('NTPSENSE_BOOTSTRAP_PASSWORD');
+        if ($bootstrapPassword === '') {
+            throw new RuntimeException(
+                'Initial administrator bootstrap password is required. Set NTPSENSE_BOOTSTRAP_PASSWORD or pass it explicitly.'
+            );
+        }
+        if (strlen($bootstrapPassword) < 20) {
+            throw new InvalidArgumentException('Initial administrator bootstrap password must be at least 20 characters.');
+        }
+
         $data = [
             'users' => [
                 [
                     'username' => self::DEFAULT_USERNAME,
-                    'password_hash' => password_hash(self::DEFAULT_PASSWORD, PASSWORD_DEFAULT),
+                    'password_hash' => password_hash($bootstrapPassword, PASSWORD_DEFAULT),
                     'must_change_password' => true,
                     'created_at' => time(),
                     'role' => self::ADMINISTRATOR_ROLE,
@@ -229,17 +299,95 @@ final class Auth
             'roles' => is_array($data['roles'] ?? null) ? $data['roles'] : [],
         ];
     }
+    private static function withCredentialLock(callable $operation): mixed
+    {
+        return self::withStateLock(self::CREDENTIAL_FILE . '.lock', $operation);
+    }
+
+    /**
+     * Execute a security-state transaction under an exclusive lock.
+     * The lock file is separate from the JSON payload so atomic replacement
+     * never invalidates the lock inode.
+     */
+    private static function withStateLock(string $lockPath, callable $operation): mixed
+    {
+        $dir = dirname($lockPath);
+        if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
+            throw new RuntimeException("Unable to create state lock directory: {$dir}");
+        }
+        $fp = fopen($lockPath, 'c');
+        if ($fp === false) {
+            throw new RuntimeException("Unable to open state lock: {$lockPath}");
+        }
+        try {
+            if (!flock($fp, LOCK_EX)) {
+                throw new RuntimeException("Unable to acquire state lock: {$lockPath}");
+            }
+            return $operation();
+        } finally {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+        }
+    }
+
+    /**
+     * Write JSON state atomically in the same directory as the target.
+     * This prevents readers from observing a partially-written file after
+     * crashes or interrupted writes. Transaction locking around the
+     * read-modify-write sequence is handled separately by mutation callers.
+     *
+     * @param array<string, mixed> $data
+     */
+    private static function atomicWriteJson(string $path, array $data, int $mode = 0640): void
+    {
+        $dir = dirname($path);
+        if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
+            throw new RuntimeException("Unable to create state directory: {$dir}");
+        }
+
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+        $tmp = tempnam($dir, '.ntpsense-state-');
+        if ($tmp === false) {
+            throw new RuntimeException("Unable to create temporary state file in {$dir}");
+        }
+
+        try {
+            $fp = fopen($tmp, 'wb');
+            if ($fp === false) {
+                throw new RuntimeException("Unable to open temporary state file: {$tmp}");
+            }
+            try {
+                if (fwrite($fp, $json . PHP_EOL) === false || !fflush($fp)) {
+                    throw new RuntimeException("Unable to write state file: {$tmp}");
+                }
+                if (function_exists('fsync')) {
+                    fsync($fp);
+                }
+            } finally {
+                fclose($fp);
+            }
+            chmod($tmp, $mode);
+            if (!rename($tmp, $path)) {
+                throw new RuntimeException("Unable to atomically replace state file: {$path}");
+            }
+        } finally {
+            if (is_file($tmp)) {
+                @unlink($tmp);
+            }
+        }
+        chmod($path, $mode);
+    }
+
     /**
      * @param array<int, array<string, mixed>> $users
      * @param array<int, array<string, mixed>> $roles
      */
     private static function saveAll(array $users, array $roles): void
     {
-        file_put_contents(self::CREDENTIAL_FILE, json_encode([
+        self::atomicWriteJson(self::CREDENTIAL_FILE, [
             'users' => array_values($users),
             'roles' => array_values($roles),
-        ], JSON_PRETTY_PRINT));
-        chmod(self::CREDENTIAL_FILE, 0640);
+        ]);
     }
     /** @return array<string, array{count:int, locked_until:int}> */
     private static function loadLockoutState(): array
@@ -257,70 +405,79 @@ final class Auth
         if (!is_dir($dir)) {
             mkdir($dir, 0750, true);
         }
-        file_put_contents(self::LOCKOUT_FILE, json_encode($state));
-        chmod(self::LOCKOUT_FILE, 0640);
+        self::atomicWriteJson(self::LOCKOUT_FILE, $state);
     }
     /**
-     * Cek dua kunci independen (username DAN IP sumber, pola Palo Alto)
-     * - kalau SALAH SATU sedang lockout, tolak. Entry yang lockout-nya
-     * sudah lewat dibersihkan sekalian di sini (self-cleaning, tidak
-     * perlu cron terpisah).
+     * Cek dua kunci independen (username DAN IP sumber).
      */
     public static function isLockedOut(string $username, string $ip): bool
     {
-        $state = self::loadLockoutState();
-        $now = time();
-        $changed = false;
-        $locked = false;
-        foreach (['user:' . $username, 'ip:' . $ip] as $key) {
-            if (isset($state[$key])) {
-                if ($state[$key]['locked_until'] > $now) {
-                    $locked = true;
-                } elseif ($state[$key]['locked_until'] > 0) {
-                    unset($state[$key]);
-                    $changed = true;
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): bool {
+            $state = self::loadLockoutState();
+            $now = time();
+            $changed = false;
+            $locked = false;
+            foreach (['user:' . $username, 'ip:' . $ip] as $key) {
+                if (isset($state[$key])) {
+                    if ($state[$key]['locked_until'] > $now) {
+                        $locked = true;
+                    } elseif ($state[$key]['locked_until'] > 0) {
+                        unset($state[$key]);
+                        $changed = true;
+                    }
                 }
             }
-        }
-        if ($changed) {
-            self::saveLockoutState($state);
-        }
-        return $locked;
+            if ($changed) {
+                self::saveLockoutState($state);
+            }
+            return $locked;
+        });
     }
-    /** @return int Detik tersisa sebelum bisa mencoba lagi (0 kalau tidak sedang lockout). */
+
+    /** @return int Detik tersisa sebelum bisa mencoba lagi. */
     public static function lockoutSecondsRemaining(string $username, string $ip): int
     {
-        $state = self::loadLockoutState();
-        $now = time();
-        $remaining = 0;
-        foreach (['user:' . $username, 'ip:' . $ip] as $key) {
-            if (isset($state[$key]) && $state[$key]['locked_until'] > $now) {
-                $remaining = max($remaining, $state[$key]['locked_until'] - $now);
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): int {
+            $state = self::loadLockoutState();
+            $now = time();
+            $remaining = 0;
+            foreach (['user:' . $username, 'ip:' . $ip] as $key) {
+                if (isset($state[$key]) && $state[$key]['locked_until'] > $now) {
+                    $remaining = max($remaining, $state[$key]['locked_until'] - $now);
+                }
             }
-        }
-        return $remaining;
+            return $remaining;
+        });
     }
+
     private static function registerFailedAttempt(string $username, string $ip): void
     {
-        $state = self::loadLockoutState();
-        $now = time();
-        foreach (['user:' . $username, 'ip:' . $ip] as $key) {
-            $entry = $state[$key] ?? ['count' => 0, 'locked_until' => 0];
-            $entry['count']++;
-            if ($entry['count'] >= self::LOCKOUT_THRESHOLD) {
-                $entry['locked_until'] = $now + self::LOCKOUT_SECONDS;
-                $entry['count'] = 0; // reset hitungan, lockout baru dimulai lagi dari 0 setelah expired
+        self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): void {
+            $state = self::loadLockoutState();
+            $now = time();
+            foreach (['user:' . $username, 'ip:' . $ip] as $key) {
+                $entry = $state[$key] ?? ['count' => 0, 'locked_until' => 0];
+                $entry['count']++;
+                if ($entry['count'] >= self::LOCKOUT_THRESHOLD) {
+                    $entry['locked_until'] = $now + self::LOCKOUT_SECONDS;
+                    $entry['count'] = 0;
+                }
+                $state[$key] = $entry;
             }
-            $state[$key] = $entry;
-        }
-        self::saveLockoutState($state);
+            self::saveLockoutState($state);
+        });
     }
+
     private static function clearFailedAttempts(string $username, string $ip): void
     {
-        $state = self::loadLockoutState();
-        unset($state['user:' . $username], $state['ip:' . $ip]);
-        self::saveLockoutState($state);
+        self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): void {
+            $state = self::loadLockoutState();
+            unset($state['user:' . $username], $state['ip:' . $ip]);
+            self::saveLockoutState($state);
+        });
     }
+
+
     /**
      * @return string 'ok' (login selesai, tidak ada 2FA), 'needs_2fa'
      * (password benar, TUNGGU verifyTwoFactor()), atau 'fail' (locked
@@ -328,6 +485,8 @@ final class Auth
      * return value ini, pesan spesifik biar login.php yang urus lewat
      * isLockedOut()/lockoutSecondsRemaining() terpisah seperti sebelumnya).
      */
+        });
+    
     public static function attempt(string $username, string $password): string
     {
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '-');
@@ -421,6 +580,7 @@ final class Auth
      */
     private static function provisionExternalUser(string $username, string $role): void
     {
+        return self::withCredentialLock(function () use ($username, $role): void {
         $data = self::loadAll();
         $found = false;
         foreach ($data['users'] as &$user) {
@@ -443,12 +603,21 @@ final class Auth
             ];
         }
         self::saveAll($data['users'], $data['roles']);
-    }
+    
+        });
+    
     public static function changePassword(string $newPassword): void
     {
         $username = (string) ($_SESSION['ntpsense_username'] ?? '');
         self::changePasswordForUser($username, $newPassword);
         $_SESSION['ntpsense_must_change_password'] = false;
+
+        // First-boot bootstrap credential is deliberately one-time. Remove it
+        // after the administrator successfully sets a new password.
+        $bootstrapCredentialFile = '/usr/local/etc/ntpsense/webui/.bootstrap-credential';
+        if (is_file($bootstrapCredentialFile)) {
+            @unlink($bootstrapCredentialFile);
+        }
 
         // Roadmap console menu (permintaan user) - sinkronkan password
         // OS juga, supaya SATU password genuinely berlaku untuk Web UI
@@ -475,6 +644,7 @@ final class Auth
      */
     public static function changePasswordForUser(string $username, string $newPassword): bool
     {
+        return self::withCredentialLock(function () use ($username, $newPassword): bool {
         $data = self::loadAll();
         $found = false;
         foreach ($data['users'] as &$user) {
@@ -490,7 +660,9 @@ final class Auth
             self::saveAll($data['users'], $data['roles']);
         }
         return $found;
-    }
+    
+        });
+    
     // ============================================================
     // 2FA (TOTP, RFC 6238) - kompatibel Google Authenticator/Authy/
     // Microsoft Authenticator. Native, TANPA server RADIUS eksternal -
@@ -631,6 +803,7 @@ final class Auth
      */
     public static function confirmTotpSetup(string $code): array
     {
+        return self::withCredentialLock(function () use ($code): array {
         // Gerbang KEDUA di sini juga (bukan cuma di beginTotpSetup()) -
         // pertahanan berlapis kalau ada state session lama tersisa dari
         // SEBELUM license CE aktif (mis. admin sempat pakai Pro, downgrade
@@ -661,9 +834,12 @@ final class Auth
         self::saveAll($data['users'], $data['roles']);
         unset($_SESSION['ntpsense_totp_setup_secret']);
         return $recoveryCodes;
-    }
+    
+        });
+    
     public static function disableTotp(): void
     {
+        return self::withCredentialLock(function () use (): void {
         // TIDAK digerbang lisensi - menonaktifkan 2FA (mengurangi
         // fitur, bukan menambah) harus SELALU boleh, termasuk kalau
         // license Pro sudah expired/downgrade ke CE (skenario nyata:
@@ -681,7 +857,9 @@ final class Auth
         }
         unset($user);
         self::saveAll($data['users'], $data['roles']);
-    }
+    
+        });
+    
     /**
      * Verifikasi tahap KEDUA login (kode TOTP ATAU recovery code) -
      * dipanggil SETELAH attempt() mengembalikan 'needs_2fa'. Session
@@ -699,6 +877,7 @@ final class Auth
      */
     public static function verifyTwoFactor(string $code): bool
     {
+        return self::withCredentialLock(function () use ($code): bool {
         $username = (string) ($_SESSION['ntpsense_2fa_pending_username'] ?? '');
         if ($username === '') {
             return false;
@@ -739,7 +918,9 @@ final class Auth
             return true;
         }
         return false;
-    }
+    
+        });
+    
     /** @return array<int, array{username:string, must_change_password:bool, created_at:int, role:string, auth_source:string}> */
     public static function listUsers(): array
     {
@@ -861,6 +1042,7 @@ final class Auth
      */
     public static function createUser(string $username, string $password, string $role): void
     {
+        return self::withCredentialLock(function () use ($username, $password, $role): void {
         $existingUserCount = count(self::loadAll()['users']);
         if ($existingUserCount >= 1) {
             self::requireProLicense('Multiple admin accounts');
@@ -890,9 +1072,12 @@ final class Auth
         ];
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'user_create', '(none)', "{$username} (role: {$role})");
-    }
+    
+        });
+    
     public static function changeUserRole(string $username, string $newRole): void
     {
+        return self::withCredentialLock(function () use ($username, $newRole): void {
         // Proteksi KEDUA, terpisah dari "Administrator terakhir tidak
         // boleh diturunkan" di bawah - khusus akun BAWAAN 'admin' (nama
         // literal, hasil bootstrap awal), permanen terkunci ke
@@ -929,9 +1114,12 @@ final class Auth
         }
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'user_change_role', "{$username}: {$oldRole}", "{$username}: {$newRole}");
-    }
+    
+        });
+    
     public static function resetPassword(string $username, string $newPassword): void
     {
+        return self::withCredentialLock(function () use ($username, $newPassword): void {
         if (strlen($newPassword) < 8) {
             throw new InvalidArgumentException('Password must be at least 8 characters.');
         }
@@ -951,7 +1139,9 @@ final class Auth
         }
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'user_reset_password', "{$username}: (previous hash)", "{$username}: (new temp password, must change on next login)");
-    }
+    
+        });
+    
     /**
      * Dua pengaman WAJIB (sama pentingnya dengan proteksi "tidak bisa
      * hapus lo0"/"tidak bisa reassign MGMT" di Network): (1) tidak
@@ -963,6 +1153,7 @@ final class Auth
      */
     public static function deleteUser(string $username): void
     {
+        return self::withCredentialLock(function () use ($username): void {
         $currentUser = self::currentUsername();
         if (hash_equals($currentUser, $username)) {
             throw new InvalidArgumentException('You cannot delete the account you are currently logged in as.');
@@ -990,7 +1181,9 @@ final class Auth
         ));
         self::saveAll($remaining, $data['roles']);
         AuditLog::logChange('system', 'user_delete', "{$username} (role: {$target['role']})", '(deleted)');
-    }
+    
+        });
+    
     /**
      * GERBANG LISENSI Agustus 2026: role CUSTOM (di luar Administrator
      * bawaan) adalah fitur Pro. Starter roles ("Network Operator",
@@ -1000,6 +1193,7 @@ final class Auth
      */
     public static function createRole(string $name, array $permissions): void
     {
+        return self::withCredentialLock(function () use ($name, $permissions): void {
         self::requireProLicense('Custom roles');
         $name = trim($name);
         if ($name === '') {
@@ -1018,9 +1212,12 @@ final class Auth
         $data['roles'][] = ['name' => $name, 'permissions' => $clean];
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'role_create', '(none)', "{$name}: " . json_encode($clean));
-    }
+    
+        });
+    
     public static function updateRole(string $name, array $permissions): void
     {
+        return self::withCredentialLock(function () use ($name, $permissions): void {
         // TIDAK digerbang - MENGEDIT role yang sudah ada (termasuk 2
         // starter roles bawaan CE) harus tetap boleh walau CE, karena
         // role itu sendiri sudah ada sejak bootstrap, bukan "membuat
@@ -1042,7 +1239,9 @@ final class Auth
         }
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'role_update', "{$name}: " . json_encode($oldPermissions), "{$name}: " . json_encode(self::sanitizePermissions($permissions)));
-    }
+    
+        });
+    
     /**
      * Cegah hapus role yang masih dipakai user manapun - kalau
      * diizinkan, user yang tersisa akan punya nama role yang tidak
@@ -1052,6 +1251,7 @@ final class Auth
      */
     public static function deleteRole(string $name): void
     {
+        return self::withCredentialLock(function () use ($name): void {
         $data = self::loadAll();
         $inUse = array_filter($data['users'], static fn (array $u) => ($u['role'] ?? '') === $name);
         if (!empty($inUse)) {
@@ -1064,7 +1264,9 @@ final class Auth
         }
         self::saveAll($data['users'], $remaining);
         AuditLog::logChange('system', 'role_delete', $name, '(deleted)');
-    }
+    
+        });
+    
     /** @return array<string,string> */
     private static function sanitizePermissions(array $permissions): array
     {

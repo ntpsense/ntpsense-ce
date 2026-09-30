@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 require_once __DIR__ . '/../lib/license.php';
 Auth::requireLogin();
@@ -468,6 +469,7 @@ if (!$installed) {
 </div>
 <?php if ($activeTab === 'general' && $proxyConfig): ?>
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="proxy_general">
   <div class="ntp-card">
     <div class="ntp-card-header">General</div>
@@ -491,6 +493,7 @@ if (!$installed) {
 <?php endif; ?>
 <?php if ($activeTab === 'local_cache' && $proxyConfig): ?>
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="proxy_local_cache">
   <div class="ntp-card">
     <div class="ntp-card-header">Local cache</div>
@@ -536,6 +539,7 @@ if (!$installed) {
           <td><?= htmlspecialchars($rule['description'] ?? '') ?></td>
           <td>
             <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="proxy_acl_reorder">
               <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
               <input type="hidden" name="direction" value="up">
@@ -544,6 +548,7 @@ if (!$installed) {
               </button>
             </form>
             <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="proxy_acl_reorder">
               <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
               <input type="hidden" name="direction" value="down">
@@ -552,6 +557,7 @@ if (!$installed) {
               </button>
             </form>
             <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="proxy_acl_delete">
               <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
               <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -565,6 +571,7 @@ if (!$installed) {
     </table>
     </div>
     <form method="post" style="padding:14px; border-top:1px solid #e5e7eb; display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; align-items:end;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="proxy_acl_add">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Action</label>
@@ -595,6 +602,7 @@ if (!$installed) {
   <div class="ntp-card">
     <div class="ntp-card-header">Basic Authentication</div>
     <form method="post" style="padding:14px; display:flex; align-items:center; gap:12px;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="proxy_auth_toggle">
       <label style="font-size:13px; color:#374151;">Require authentication:</label>
       <select name="enabled" onchange="this.form.submit()" style="max-width:200px;">
@@ -618,7 +626,8 @@ if (!$installed) {
         <tr>
           <td><?= htmlspecialchars($username) ?></td>
           <td>
-            <form method="post" style="margin:0;" onsubmit="return confirm('Delete user <?= htmlspecialchars($username) ?>?');">
+            <form method="post" style="margin:0;" onsubmit="return confirm('Delete user <?= htmlspecialchars($username) ?>
+<?= Auth::csrfField() ?>?');">
               <input type="hidden" name="form" value="proxy_auth_delete_user">
               <input type="hidden" name="username" value="<?= htmlspecialchars($username) ?>">
               <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -630,6 +639,7 @@ if (!$installed) {
       <?php endforeach; ?>
     </table>
     <form method="post" style="padding:14px; border-top:1px solid #e5e7eb; display:flex; align-items:end; gap:12px;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="proxy_auth_add_user">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Username</label>
@@ -661,6 +671,7 @@ if (!$installed) {
   $blacklistText = $blocklistConfig['_raw_blacklist'] ?? implode("\n", $blocklistConfig['blacklist_manual'] ?? []);
   ?>
   <form method="post">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="proxy_blocklist">
     <div class="ntp-card">
       <div class="ntp-card-header">Category blocklists</div>
@@ -698,6 +709,7 @@ if (!$installed) {
     <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Save blocklist configuration</button>
   </form>
   <form method="post" style="margin-top:12px;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="proxy_blocklist_update">
     <button type="submit" style="background:#ffffff; color:#14213d; border:1px solid #14213d; padding:8px 18px; font-size:13px; border-radius:6px;">Update blocklists now</button>
     <span style="font-size:12px; color:#6b7280; margin-left:10px;">Downloads the latest domain lists for the categories currently enabled above.</span>
@@ -761,6 +773,7 @@ if (!$installed) {
       <?php endif; ?>
     </form>
     <form method="post" style="padding:0 14px 14px; display:flex; align-items:center; gap:10px;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="proxy_archive_settings">
       <label style="font-size:12px; color:#374151;">Keep history for:</label>
       <select name="retention_days" onchange="this.form.submit()" style="max-width:180px;">
@@ -867,6 +880,7 @@ if (!$installed) {
       <?php endif; ?>
     </form>
     <form method="post" style="padding:0 14px 14px; display:flex; align-items:center; gap:10px;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="proxy_archive_settings">
       <label style="font-size:12px; color:#374151;">Keep history for:</label>
       <select name="retention_days" onchange="this.form.submit()" style="max-width:180px;">

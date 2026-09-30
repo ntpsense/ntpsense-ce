@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 
 Auth::requireLogin();
@@ -247,6 +248,7 @@ require __DIR__ . '/../templates/layout_header.php';
         <td><?= htmlspecialchars($r['description'] ?? '') ?></td>
         <td style="white-space:nowrap;">
           <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="nat_portforward_reorder">
             <input type="hidden" name="id" value="<?= htmlspecialchars($r['id']) ?>">
             <input type="hidden" name="direction" value="up">
@@ -255,6 +257,7 @@ require __DIR__ . '/../templates/layout_header.php';
             </button>
           </form>
           <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="nat_portforward_reorder">
             <input type="hidden" name="id" value="<?= htmlspecialchars($r['id']) ?>">
             <input type="hidden" name="direction" value="down">
@@ -266,6 +269,7 @@ require __DIR__ . '/../templates/layout_header.php';
             <i class="ti ti-pencil" style="font-size:16px;" aria-hidden="true"></i>
           </a>
           <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="nat_portforward_copy">
             <input type="hidden" name="interface" value="<?= htmlspecialchars($r['interface'] ?? $wan1If) ?>">
             <input type="hidden" name="protocol" value="<?= htmlspecialchars($r['protocol'] ?? 'tcp') ?>">
@@ -278,6 +282,7 @@ require __DIR__ . '/../templates/layout_header.php';
             </button>
           </form>
           <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete this port forward rule?');">
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="nat_portforward_delete">
             <input type="hidden" name="id" value="<?= htmlspecialchars($r['id']) ?>">
             <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -298,6 +303,7 @@ require __DIR__ . '/../templates/layout_header.php';
     </div>
   <?php endif; ?>
   <form method="post" style="padding:14px; border-top:1px solid #e5e7eb; display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; align-items:end;">
+<?= Auth::csrfField() ?>
     <input type="hidden" name="form" value="nat_portforward_add">
     <?php if ($editingRule): ?>
       <input type="hidden" name="replace_id" value="<?= htmlspecialchars($editingRule['id']) ?>">
