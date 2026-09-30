@@ -92,10 +92,16 @@ On FreeBSD-Build:
 ## SEC-03 next
 Serialize and atomically persist `webui-admin.json` and `lockout.json`: exclusive lock → read/modify → private temp file → flush/sync where supported → atomic rename → unlock. Add concurrency tests.
 
-## SEC-03 status — PARTIAL
-State persistence now uses atomic same-directory temporary files followed by rename, with mode restoration and `fsync()` where supported. This prevents truncated/partially-written JSON after interruption.
+## SEC-03 status — IMPLEMENTED; RUNTIME VALIDATION PENDING
+Security-state persistence now has two layers:
+1. atomic same-directory temporary-file replacement with mode restoration and `fsync()` where supported;
+2. exclusive transaction locks covering credential and lockout read-modify-write operations.
 
-**Important:** atomic replacement does **not** by itself eliminate lost-update races. The remaining work is to wrap each credential and lockout read-modify-write mutation in an exclusive transaction lock covering the complete operation. This remains a P0 task and must be validated with concurrent update tests.
+Credential transactions use `webui-admin.json.lock`; lockout transactions use `lockout.json.lock`. The lock inode is separate from the JSON payload, so atomic replacement cannot invalidate the lock.
+
+All identified `saveAll()` mutation boundaries are covered, including external-user provisioning, password changes/resets, user creation/role/delete operations, and TOTP/recovery-code state changes.
+
+Runtime concurrency testing is still required before SEC-03 can be marked PASS.
 
 ## SEC-04 next
 Inventory all predictable `/tmp` paths in the Rust daemon. Use exclusive random temp files/private staging directories and configuration transaction locking.
@@ -126,6 +132,6 @@ Keep known-good snapshots such as `baseline-main`, `p0-sec01-before`, and `p0-se
 | Web UI CSRF rollout | IMPLEMENTED — runtime validation pending |
 | FreeBSD validation | PENDING |
 | SEC-02 | NEXT |
-| SEC-03 | PARTIAL — atomic write implemented; transaction locking pending |
+| SEC-03 | IMPLEMENTED — FreeBSD concurrency validation pending |
 | SEC-04 | PENDING |
 | Deep Audit Pass #2 | PENDING |
