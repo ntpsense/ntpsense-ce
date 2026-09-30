@@ -300,6 +300,32 @@ final class Auth
         ];
     }
     /**
+     * Execute a security-state transaction under an exclusive lock.
+     * The lock file is separate from the JSON payload so atomic replacement
+     * never invalidates the lock inode.
+     */
+    private static function withStateLock(string $lockPath, callable $operation): mixed
+    {
+        $dir = dirname($lockPath);
+        if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
+            throw new RuntimeException("Unable to create state lock directory: {$dir}");
+        }
+        $fp = fopen($lockPath, 'c');
+        if ($fp === false) {
+            throw new RuntimeException("Unable to open state lock: {$lockPath}");
+        }
+        try {
+            if (!flock($fp, LOCK_EX)) {
+                throw new RuntimeException("Unable to acquire state lock: {$lockPath}");
+            }
+            return $operation();
+        } finally {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+        }
+    }
+
+    /**
      * Write JSON state atomically in the same directory as the target.
      * This prevents readers from observing a partially-written file after
      * crashes or interrupted writes. Transaction locking around the
