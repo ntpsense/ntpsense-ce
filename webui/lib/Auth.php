@@ -465,6 +465,12 @@ final class Auth
             $_SESSION['ntpsense_admin'] = true;
             $_SESSION['ntpsense_username'] = $username;
             $_SESSION['ntpsense_must_change_password'] = false;
+        // First-boot bootstrap credential is deliberately one-time. Remove it
+        // after the administrator successfully sets a new password.
+        $bootstrapCredentialFile = '/usr/local/etc/ntpsense/webui/.bootstrap-credential';
+        if (is_file($bootstrapCredentialFile)) {
+            @unlink($bootstrapCredentialFile);
+        }
             session_regenerate_id(true);
             AuditLog::logLogin($username, true, "external auth (role: {$externalRole})");
             return 'ok';
