@@ -299,6 +299,11 @@ final class Auth
             'roles' => is_array($data['roles'] ?? null) ? $data['roles'] : [],
         ];
     }
+    private static function withCredentialLock(callable $operation): mixed
+    {
+        return self::withStateLock(self::CREDENTIAL_FILE . '.lock', $operation);
+    }
+
     /**
      * Execute a security-state transaction under an exclusive lock.
      * The lock file is separate from the JSON payload so atomic replacement
