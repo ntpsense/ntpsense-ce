@@ -1027,6 +1027,7 @@ final class Auth
      */
     public static function createUser(string $username, string $password, string $role): void
     {
+        return self::withCredentialLock(function () use ($username, $password, $role): void {
         $existingUserCount = count(self::loadAll()['users']);
         if ($existingUserCount >= 1) {
             self::requireProLicense('Multiple admin accounts');
@@ -1056,7 +1057,9 @@ final class Auth
         ];
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'user_create', '(none)', "{$username} (role: {$role})");
-    }
+    
+        });
+    
     public static function changeUserRole(string $username, string $newRole): void
     {
         // Proteksi KEDUA, terpisah dari "Administrator terakhir tidak
