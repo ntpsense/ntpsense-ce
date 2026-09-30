@@ -224,12 +224,14 @@ if (!$installed) {
           </table>
         <?php endif; ?>
         <form method="post" style="margin-top:12px;" onsubmit="return confirm('Delete the entire PKI? Every existing client and site certificate becomes permanently invalid immediately - they will all need to be recreated with a fresh CA. This cannot be undone. Continue?');">
+<?= Auth::csrfField() ?>
           <input type="hidden" name="form" value="reset_pki">
           <button type="submit" style="background:#fff0f0; color:#b3261e; border:1px solid #f2b8b5; padding:6px 14px; font-size:12px; border-radius:6px;">Delete &amp; Reset PKI</button>
         </form>
       </div>
     <?php else: ?>
       <form method="post" style="padding:0 14px 14px;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="init_pki">
         <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:8px 18px; font-size:13px; border-radius:6px;">Initialize PKI</button>
       </form>
@@ -238,6 +240,7 @@ if (!$installed) {
   <div class="ntp-card">
     <div class="ntp-card-header">2. Server Settings</div>
     <form method="post" style="padding:14px; display:flex; flex-direction:column; gap:14px;" onsubmit="var p=parseInt(this.port.value,10); var reserved={80:'Web UI (HTTP)',443:'Web UI (HTTPS)',22:'SSH',500:'IPsec IKE',4500:'IPsec NAT-T'}; if (reserved[p]) { alert('Port ' + p + ' is already used by ' + reserved[p] + ' on this gateway - pick a different port (943 is a safe TCP-mode alternative).'); return false; }">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="set_config">
       <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
         <input type="checkbox" name="enabled" value="1" <?= $cfg['enabled'] ? 'checked' : '' ?>>
@@ -321,12 +324,14 @@ if (!$installed) {
           <td>
             <?php if (!$isRevoked): ?>
               <form method="post" style="display:inline-flex; gap:4px; align-items:center; margin-right:8px;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="client_download">
                 <input type="hidden" name="name" value="<?= htmlspecialchars($c['name']) ?>">
                 <input type="text" name="server_host" placeholder="vpn.example.com or public IP" required style="font-size:11px; width:170px;">
                 <button type="submit" style="background:#14213d; color:#fff; border:none; padding:4px 10px; font-size:11px; border-radius:6px;">Get .ovpn</button>
               </form>
               <form method="post" style="display:inline; margin-right:6px;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="client_set_active">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($c['id']) ?>">
                 <input type="hidden" name="active" value="<?= $isActive ? '0' : '1' ?>">
@@ -334,14 +339,16 @@ if (!$installed) {
                   <i class="ti ti-<?= $isActive ? 'player-pause' : 'player-play' ?>" style="font-size:16px;" aria-hidden="true"></i>
                 </button>
               </form>
-              <form method="post" style="display:inline; margin-right:6px;" onsubmit="return confirm('Disconnect &quot;<?= htmlspecialchars($c['name']) ?>&quot;\'s current session, if any is active right now? They can reconnect immediately unless also deactivated or revoked.');">
+              <form method="post" style="display:inline; margin-right:6px;" onsubmit="return confirm('Disconnect &quot;<?= htmlspecialchars($c['name']) ?>
+<?= Auth::csrfField() ?>&quot;\'s current session, if any is active right now? They can reconnect immediately unless also deactivated or revoked.');">
                 <input type="hidden" name="form" value="client_disconnect">
                 <input type="hidden" name="name" value="<?= htmlspecialchars($c['name']) ?>">
                 <button type="submit" title="Disconnect current session" style="background:none; border:none; cursor:pointer; color:#9a5b00; padding:4px;">
                   <i class="ti ti-plug-connected-x" style="font-size:16px;" aria-hidden="true"></i>
                 </button>
               </form>
-              <form method="post" style="display:inline;" onsubmit="return confirm('Revoke client &quot;<?= htmlspecialchars($c['name']) ?>&quot;? This is PERMANENT - unlike Deactivate, the certificate itself is invalidated and cannot be restored.');">
+              <form method="post" style="display:inline;" onsubmit="return confirm('Revoke client &quot;<?= htmlspecialchars($c['name']) ?>
+<?= Auth::csrfField() ?>&quot;? This is PERMANENT - unlike Deactivate, the certificate itself is invalidated and cannot be restored.');">
                 <input type="hidden" name="form" value="client_revoke">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($c['id']) ?>">
                 <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;" title="Revoke (permanent)"><i class="ti ti-trash" style="font-size:16px;" aria-hidden="true"></i></button>
@@ -357,6 +364,7 @@ if (!$installed) {
   <div class="ntp-card">
     <div class="ntp-card-header">Create Client</div>
     <form method="post" style="padding:14px; display:flex; gap:10px; align-items:end;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="client_create">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label>
@@ -385,12 +393,14 @@ if (!$installed) {
           <td>
             <?php if (empty($s['revoked'])): ?>
               <form method="post" style="display:inline-flex; gap:4px; align-items:center; margin-right:8px;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="site_download">
                 <input type="hidden" name="name" value="<?= htmlspecialchars($s['name']) ?>">
                 <input type="text" name="server_host" placeholder="vpn.example.com or public IP" required style="font-size:11px; width:170px;">
                 <button type="submit" style="background:#14213d; color:#fff; border:none; padding:4px 10px; font-size:11px; border-radius:6px;">Get .ovpn</button>
               </form>
-              <form method="post" style="display:inline;" onsubmit="return confirm('Revoke site &quot;<?= htmlspecialchars($s['name']) ?>&quot;?');">
+              <form method="post" style="display:inline;" onsubmit="return confirm('Revoke site &quot;<?= htmlspecialchars($s['name']) ?>
+<?= Auth::csrfField() ?>&quot;?');">
                 <input type="hidden" name="form" value="site_revoke">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($s['id']) ?>">
                 <button type="submit" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;" title="Revoke"><i class="ti ti-trash" style="font-size:16px;" aria-hidden="true"></i></button>
@@ -406,6 +416,7 @@ if (!$installed) {
   <div class="ntp-card">
     <div class="ntp-card-header">Create Site</div>
     <form method="post" style="padding:14px; display:flex; gap:10px; align-items:end;">
+<?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="site_create">
       <div>
         <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label>
@@ -450,7 +461,8 @@ if (!$installed) {
             <td style="font-family:monospace; font-size:12px;"><?= htmlspecialchars($c['virtual_address'] ?? '') ?></td>
             <td style="font-size:12px;"><?= htmlspecialchars($c['connected_since'] ?? '') ?></td>
             <td>
-              <form method="post" style="margin:0; display:inline;" onsubmit="return confirm('Disconnect &quot;<?= htmlspecialchars($displayName) ?>&quot;\'s current session?');">
+              <form method="post" style="margin:0; display:inline;" onsubmit="return confirm('Disconnect &quot;<?= htmlspecialchars($displayName) ?>
+<?= Auth::csrfField() ?>&quot;\'s current session?');">
                 <input type="hidden" name="form" value="client_disconnect">
                 <input type="hidden" name="name" value="<?= htmlspecialchars($displayName) ?>">
                 <button type="submit" title="Disconnect" style="background:none; border:none; cursor:pointer; color:#9a5b00; padding:4px;"><i class="ti ti-plug-connected-x" style="font-size:16px;" aria-hidden="true"></i></button>
