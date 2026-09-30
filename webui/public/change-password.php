@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 
 if (empty($_SESSION['ntpsense_admin'])) {
     header('Location: /login.php');
@@ -40,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="ntp-alert-error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
     <form method="post">
+<?= Auth::csrfField() ?>
       <div class="ntp-field">
         <label for="new_password">New password</label>
         <input type="password" id="new_password" name="new_password" required minlength="8" autofocus>
