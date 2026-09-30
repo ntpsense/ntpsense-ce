@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 
 Auth::requireLogin();
@@ -584,6 +585,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 <details style="display:inline-block;">
                   <summary style="cursor:pointer; display:inline-block; color:#374151; font-size:12px;">Edit</summary>
                   <form method="post" style="margin:8px 0 0; display:flex; gap:8px; align-items:end;">
+<?= Auth::csrfField() ?>
                     <input type="hidden" name="form" value="limiter_update">
                     <input type="hidden" name="name" value="<?= htmlspecialchars($l['name']) ?>">
                     <div>
@@ -597,7 +599,8 @@ require __DIR__ . '/../templates/layout_header.php';
                     <button type="submit" style="background:#14213d; color:#ffffff; border:none; padding:6px 12px; font-size:12px; border-radius:6px;">Save</button>
                   </form>
                 </details>
-                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete limiter &quot;<?= htmlspecialchars($l['name']) ?>&quot;? Rules using it must be updated first.');">
+                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete limiter &quot;<?= htmlspecialchars($l['name']) ?>
+<?= Auth::csrfField() ?>&quot;? Rules using it must be updated first.');">
                   <input type="hidden" name="form" value="limiter_delete">
                   <input type="hidden" name="name" value="<?= htmlspecialchars($l['name']) ?>">
                   <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px; margin-left:6px;">
@@ -615,6 +618,7 @@ require __DIR__ . '/../templates/layout_header.php';
       <div style="margin-top:16px; padding-top:14px; border-top:1px solid #e5e7eb;">
         <p style="font-size:13px; font-weight:500; margin:0 0 10px;">Add limiter</p>
         <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
           <input type="hidden" name="form" value="limiter_create">
           <div>
             <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label>
@@ -672,6 +676,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 <details style="display:inline-block;">
                   <summary style="cursor:pointer; display:inline-block; color:#374151; font-size:12px;">Edit members</summary>
                   <form method="post" style="margin:8px 0 0;">
+<?= Auth::csrfField() ?>
                     <input type="hidden" name="form" value="zone_group_update">
                     <input type="hidden" name="name" value="<?= htmlspecialchars($g['name']) ?>">
                     <?php foreach ($zoneGroupEligible as $iface): ?>
@@ -684,7 +689,8 @@ require __DIR__ . '/../templates/layout_header.php';
                   </form>
                 </details>
                 <a href="?zone=zg_<?= urlencode($g['name']) ?>" style="font-size:12px; color:#374151; margin-left:8px;">View rules</a>
-                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete Zone Group &quot;<?= htmlspecialchars($g['name']) ?>&quot;? Rules on its tab must be removed first.');">
+                <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete Zone Group &quot;<?= htmlspecialchars($g['name']) ?>
+<?= Auth::csrfField() ?>&quot;? Rules on its tab must be removed first.');">
                   <input type="hidden" name="form" value="zone_group_delete">
                   <input type="hidden" name="name" value="<?= htmlspecialchars($g['name']) ?>">
                   <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px; margin-left:6px;">
@@ -705,6 +711,7 @@ require __DIR__ . '/../templates/layout_header.php';
           <p style="font-size:12px; color:#6b7280;">No eligible LAN1/OPT (non-WAN) interfaces available to group yet.</p>
         <?php else: ?>
           <form method="post" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="zone_group_create">
             <div>
               <label style="display:block; font-size:12px; color:#374151; margin-bottom:4px;">Name</label>
@@ -770,6 +777,7 @@ require __DIR__ . '/../templates/layout_header.php';
             <td><?= htmlspecialchars($rule['description'] ?? '') ?></td>
             <td>
               <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="reorder_rule">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <input type="hidden" name="direction" value="up">
@@ -778,6 +786,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 </button>
               </form>
               <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="reorder_rule">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <input type="hidden" name="direction" value="down">
@@ -786,6 +795,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 </button>
               </form>
               <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="toggle_rule_enabled">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <input type="hidden" name="enabled" value="<?= $ruleIsEnabled ? '0' : '1' ?>">
@@ -799,7 +809,8 @@ require __DIR__ . '/../templates/layout_header.php';
               <a href="?zone=floating&copy=<?= htmlspecialchars($rule['id']) ?>" title="Copy rule" style="color:#374151; padding:4px; display:inline-block;">
                 <i class="ti ti-copy" style="font-size:16px;" aria-hidden="true"></i>
               </a>
-              <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete this Floating Rule?\n\n<?= htmlspecialchars(addslashes($rule['action'] . ' ' . ($rule['direction'] ?? 'in') . ' ' . $rule['protocol'] . ' from ' . ($rule['source'] ?? 'any') . ' to ' . $rule['destination'])) ?>\n\nThis cannot be undone.');">
+              <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete this Floating Rule?\n\n<?= htmlspecialchars(addslashes($rule['action'] . ' ' . ($rule['direction'] ?? 'in') . ' ' . $rule['protocol'] . ' from ' . ($rule['source'] ?? 'any') . ' to ' . $rule['destination'])) ?>
+<?= Auth::csrfField() ?>\n\nThis cannot be undone.');">
                 <input type="hidden" name="form" value="delete_rule">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <button type="submit" title="Delete rule" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -969,6 +980,7 @@ require __DIR__ . '/../templates/layout_header.php';
             </td>
             <td>
               <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="reorder_rule">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <input type="hidden" name="direction" value="up">
@@ -977,6 +989,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 </button>
               </form>
               <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="reorder_rule">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <input type="hidden" name="direction" value="down">
@@ -985,6 +998,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 </button>
               </form>
               <form method="post" style="margin:0; display:inline-block;">
+<?= Auth::csrfField() ?>
                 <input type="hidden" name="form" value="toggle_rule_enabled">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <input type="hidden" name="enabled" value="<?= $ruleIsEnabled ? '0' : '1' ?>">
@@ -998,7 +1012,8 @@ require __DIR__ . '/../templates/layout_header.php';
               <a href="?zone=<?= htmlspecialchars($activeTabKey) ?>&copy=<?= htmlspecialchars($rule['id']) ?>" title="Copy rule" style="color:#374151; padding:4px; display:inline-block;">
                 <i class="ti ti-copy" style="font-size:16px;" aria-hidden="true"></i>
               </a>
-              <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete this rule?\n\n<?= htmlspecialchars(addslashes($rule['action'] . ' ' . ($rule['direction'] ?? 'in') . ' ' . $rule['protocol'] . ' from ' . ($rule['source'] ?? 'any') . ' to ' . $rule['destination'])) ?>\n\nThis cannot be undone.');">
+              <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete this rule?\n\n<?= htmlspecialchars(addslashes($rule['action'] . ' ' . ($rule['direction'] ?? 'in') . ' ' . $rule['protocol'] . ' from ' . ($rule['source'] ?? 'any') . ' to ' . $rule['destination'])) ?>
+<?= Auth::csrfField() ?>\n\nThis cannot be undone.');">
                 <input type="hidden" name="form" value="delete_rule">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($rule['id']) ?>">
                 <button type="submit" title="Delete rule" style="background:none; border:none; cursor:pointer; color:#b3261e; padding:4px;">
@@ -1053,6 +1068,7 @@ require __DIR__ . '/../templates/layout_header.php';
         is handled automatically by the firewall's connection state, no separate rule needed on the WLC's own zone.
       </p>
       <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="add_capwap_rule">
         <input type="hidden" name="interface" value="<?= htmlspecialchars((string) $activeInterface) ?>">
         <div style="flex:1; min-width:220px;">
@@ -1081,6 +1097,7 @@ require __DIR__ . '/../templates/layout_header.php';
         </div>
       <?php endif; ?>
       <form method="post" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end;">
+<?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="add_rule">
         <?php if ($activeTabKey === 'floating'): ?>
           <input type="hidden" name="floating" value="1">
@@ -1184,6 +1201,7 @@ require __DIR__ . '/../templates/layout_header.php';
 
 <?php if ($duplicateWarning): ?>
 <form method="post" id="duplicateResubmitForm" style="display:none;">
+<?= Auth::csrfField() ?>
   <?php foreach ($duplicateWarning['params'] as $key => $value): ?>
     <input type="hidden" name="<?= htmlspecialchars($key) ?>" value="<?= htmlspecialchars((string) $value) ?>">
   <?php endforeach; ?>
