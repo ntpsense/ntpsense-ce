@@ -331,6 +331,7 @@ $ipsPilotIfs = $securityConfig['ips']['pilot_interfaces'] ?? [];
       </p>
       <?php if (!empty($wanCandidates)): ?>
         <form method="post" style="margin-top:10px;">
+<?= Auth::csrfField() ?>
           <input type="hidden" name="form" value="security_ips">
           <?php foreach ($wanCandidates as $wc): ?>
             <label style="display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:6px;">
@@ -353,6 +354,7 @@ $ipsPilotIfs = $securityConfig['ips']['pilot_interfaces'] ?? [];
 </div>
 
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="security_general">
   <div class="ntp-card">
     <div class="ntp-card-header">Inspect per zone</div>
@@ -384,6 +386,7 @@ $ipsPilotIfs = $securityConfig['ips']['pilot_interfaces'] ?? [];
 
 <?php elseif ($activeTab === 'sources'): ?>
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="security_sources">
   <div class="ntp-card">
     <div class="ntp-card-header">Rule sources</div>
@@ -417,6 +420,7 @@ $ipsPilotIfs = $securityConfig['ips']['pilot_interfaces'] ?? [];
 </form>
 
 <form method="post" style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="security_update_rules">
   <button type="submit" style="background:#ffffff; color:#14213d; border:1px solid #14213d; padding:8px 18px; font-size:13px; border-radius:6px;">Update rules now</button>
   <span style="font-size:12px; color:#6b7280;">
@@ -452,6 +456,7 @@ $policyCategories = [
 $disabledSet = array_flip($securityConfig['policy']['disabled_categories'] ?? []);
 ?>
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="security_policy">
   <div class="ntp-card">
     <div class="ntp-card-header">Policy — disable rule categories</div>
@@ -479,6 +484,7 @@ $disabledSet = array_flip($securityConfig['policy']['disabled_categories'] ?? []
 
 <?php elseif ($activeTab === 'custom_rules'): ?>
 <form method="post">
+<?= Auth::csrfField() ?>
   <input type="hidden" name="form" value="security_custom_rules">
   <div class="ntp-card">
     <div class="ntp-card-header">Custom rules — admin-authored Suricata signatures</div>
