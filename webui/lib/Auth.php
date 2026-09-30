@@ -403,76 +403,75 @@ final class Auth
         self::atomicWriteJson(self::LOCKOUT_FILE, $state);
     }
     /**
-     * Cek dua kunci independen (username DAN IP sumber, pola Palo Alto)
-     * - kalau SALAH SATU sedang lockout, tolak. Entry yang lockout-nya
-     * sudah lewat dibersihkan sekalian di sini (self-cleaning, tidak
-     * perlu cron terpisah).
+     * Cek dua kunci independen (username DAN IP sumber).
      */
     public static function isLockedOut(string $username, string $ip): bool
     {
-        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
-        $state = self::loadLockoutState();
-        $now = time();
-        $changed = false;
-        $locked = false;
-        foreach (['user:' . $username, 'ip:' . $ip] as $key) {
-            if (isset($state[$key])) {
-                if ($state[$key]['locked_until'] > $now) {
-                    $locked = true;
-                } elseif ($state[$key]['locked_until'] > 0) {
-                    unset($state[$key]);
-                    $changed = true;
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): bool {
+            $state = self::loadLockoutState();
+            $now = time();
+            $changed = false;
+            $locked = false;
+            foreach (['user:' . $username, 'ip:' . $ip] as $key) {
+                if (isset($state[$key])) {
+                    if ($state[$key]['locked_until'] > $now) {
+                        $locked = true;
+                    } elseif ($state[$key]['locked_until'] > 0) {
+                        unset($state[$key]);
+                        $changed = true;
+                    }
                 }
             }
-        }
-        if ($changed) {
-            self::saveLockoutState($state);
-        }
-        return $locked;
-    }
-    /** @return int Detik tersisa sebelum bisa mencoba lagi (0 kalau tidak sedang lockout). */
+            if ($changed) {
+                self::saveLockoutState($state);
+            }
+            return $locked;
         });
-    
+    }
+
+    /** @return int Detik tersisa sebelum bisa mencoba lagi. */
     public static function lockoutSecondsRemaining(string $username, string $ip): int
     {
-        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
-        $state = self::loadLockoutState();
-        $now = time();
-        $remaining = 0;
-        foreach (['user:' . $username, 'ip:' . $ip] as $key) {
-            if (isset($state[$key]) && $state[$key]['locked_until'] > $now) {
-                $remaining = max($remaining, $state[$key]['locked_until'] - $now);
+        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): int {
+            $state = self::loadLockoutState();
+            $now = time();
+            $remaining = 0;
+            foreach (['user:' . $username, 'ip:' . $ip] as $key) {
+                if (isset($state[$key]) && $state[$key]['locked_until'] > $now) {
+                    $remaining = max($remaining, $state[$key]['locked_until'] - $now);
+                }
             }
-        }
-        return $remaining;
-    }
+            return $remaining;
         });
-    
+    }
+
     private static function registerFailedAttempt(string $username, string $ip): void
     {
-        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
-        $state = self::loadLockoutState();
-        $now = time();
-        foreach (['user:' . $username, 'ip:' . $ip] as $key) {
-            $entry = $state[$key] ?? ['count' => 0, 'locked_until' => 0];
-            $entry['count']++;
-            if ($entry['count'] >= self::LOCKOUT_THRESHOLD) {
-                $entry['locked_until'] = $now + self::LOCKOUT_SECONDS;
-                $entry['count'] = 0; // reset hitungan, lockout baru dimulai lagi dari 0 setelah expired
+        self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): void {
+            $state = self::loadLockoutState();
+            $now = time();
+            foreach (['user:' . $username, 'ip:' . $ip] as $key) {
+                $entry = $state[$key] ?? ['count' => 0, 'locked_until' => 0];
+                $entry['count']++;
+                if ($entry['count'] >= self::LOCKOUT_THRESHOLD) {
+                    $entry['locked_until'] = $now + self::LOCKOUT_SECONDS;
+                    $entry['count'] = 0;
+                }
+                $state[$key] = $entry;
             }
-            $state[$key] = $entry;
-        }
-        self::saveLockoutState($state);
-    }
+            self::saveLockoutState($state);
         });
-    
+    }
+
     private static function clearFailedAttempts(string $username, string $ip): void
     {
-        return self::withStateLock(self::LOCKOUT_FILE . '.lock', function () {
-        $state = self::loadLockoutState();
-        unset($state['user:' . $username], $state['ip:' . $ip]);
-        self::saveLockoutState($state);
+        self::withStateLock(self::LOCKOUT_FILE . '.lock', function () use ($username, $ip): void {
+            $state = self::loadLockoutState();
+            unset($state['user:' . $username], $state['ip:' . $ip]);
+            self::saveLockoutState($state);
+        });
     }
+
     /**
      * @return string 'ok' (login selesai, tidak ada 2FA), 'needs_2fa'
      * (password benar, TUNGGU verifyTwoFactor()), atau 'fail' (locked
