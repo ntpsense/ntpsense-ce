@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 Auth::requireLogin();
 Auth::requireCategory('system_logs');
@@ -383,6 +384,7 @@ require __DIR__ . '/../templates/layout_header.php';
           <a href="<?= htmlspecialchars((string) ($a['link'] ?? '#')) ?>" style="color:#14213d; text-decoration:underline;">View</a>
           <?php if (empty($a['acknowledged'])): ?>
             <form method="post" style="display:inline; margin:0 0 0 8px;">
+<?= Auth::csrfField() ?>
               <input type="hidden" name="form" value="alert_acknowledge_source">
               <input type="hidden" name="source" value="<?= htmlspecialchars((string) ($a['source'] ?? '')) ?>">
               <button type="submit" style="background:none; border:none; cursor:pointer; color:#1a7f4b; text-decoration:underline; padding:0; font-size:inherit;">Acknowledge</button>
