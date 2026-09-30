@@ -1062,6 +1062,7 @@ final class Auth
     
     public static function changeUserRole(string $username, string $newRole): void
     {
+        return self::withCredentialLock(function () use ($username, $newRole): void {
         // Proteksi KEDUA, terpisah dari "Administrator terakhir tidak
         // boleh diturunkan" di bawah - khusus akun BAWAAN 'admin' (nama
         // literal, hasil bootstrap awal), permanen terkunci ke
@@ -1098,9 +1099,12 @@ final class Auth
         }
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'user_change_role', "{$username}: {$oldRole}", "{$username}: {$newRole}");
-    }
+    
+        });
+    
     public static function resetPassword(string $username, string $newPassword): void
     {
+        return self::withCredentialLock(function () use ($username, $newPassword): void {
         if (strlen($newPassword) < 8) {
             throw new InvalidArgumentException('Password must be at least 8 characters.');
         }
@@ -1120,7 +1124,9 @@ final class Auth
         }
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'user_reset_password', "{$username}: (previous hash)", "{$username}: (new temp password, must change on next login)");
-    }
+    
+        });
+    
     /**
      * Dua pengaman WAJIB (sama pentingnya dengan proteksi "tidak bisa
      * hapus lo0"/"tidak bisa reassign MGMT" di Network): (1) tidak
@@ -1132,6 +1138,7 @@ final class Auth
      */
     public static function deleteUser(string $username): void
     {
+        return self::withCredentialLock(function () use ($username): void {
         $currentUser = self::currentUsername();
         if (hash_equals($currentUser, $username)) {
             throw new InvalidArgumentException('You cannot delete the account you are currently logged in as.');
@@ -1159,7 +1166,9 @@ final class Auth
         ));
         self::saveAll($remaining, $data['roles']);
         AuditLog::logChange('system', 'user_delete', "{$username} (role: {$target['role']})", '(deleted)');
-    }
+    
+        });
+    
     /**
      * GERBANG LISENSI Agustus 2026: role CUSTOM (di luar Administrator
      * bawaan) adalah fitur Pro. Starter roles ("Network Operator",
@@ -1169,6 +1178,7 @@ final class Auth
      */
     public static function createRole(string $name, array $permissions): void
     {
+        return self::withCredentialLock(function () use ($name, $permissions): void {
         self::requireProLicense('Custom roles');
         $name = trim($name);
         if ($name === '') {
@@ -1187,9 +1197,12 @@ final class Auth
         $data['roles'][] = ['name' => $name, 'permissions' => $clean];
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'role_create', '(none)', "{$name}: " . json_encode($clean));
-    }
+    
+        });
+    
     public static function updateRole(string $name, array $permissions): void
     {
+        return self::withCredentialLock(function () use ($name, $permissions): void {
         // TIDAK digerbang - MENGEDIT role yang sudah ada (termasuk 2
         // starter roles bawaan CE) harus tetap boleh walau CE, karena
         // role itu sendiri sudah ada sejak bootstrap, bukan "membuat
@@ -1211,7 +1224,9 @@ final class Auth
         }
         self::saveAll($data['users'], $data['roles']);
         AuditLog::logChange('system', 'role_update', "{$name}: " . json_encode($oldPermissions), "{$name}: " . json_encode(self::sanitizePermissions($permissions)));
-    }
+    
+        });
+    
     /**
      * Cegah hapus role yang masih dipakai user manapun - kalau
      * diizinkan, user yang tersisa akan punya nama role yang tidak
@@ -1221,6 +1236,7 @@ final class Auth
      */
     public static function deleteRole(string $name): void
     {
+        return self::withCredentialLock(function () use ($name): void {
         $data = self::loadAll();
         $inUse = array_filter($data['users'], static fn (array $u) => ($u['role'] ?? '') === $name);
         if (!empty($inUse)) {
@@ -1233,7 +1249,9 @@ final class Auth
         }
         self::saveAll($data['users'], $remaining);
         AuditLog::logChange('system', 'role_delete', $name, '(deleted)');
-    }
+    
+        });
+    
     /** @return array<string,string> */
     private static function sanitizePermissions(array $permissions): array
     {
