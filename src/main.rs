@@ -97,6 +97,41 @@ fn secure_temp_file(label: &str) -> Result<String, String> {
     Err("Unable to allocate a unique secure temporary file".to_string())
 }
 
+/// Create a unique root-private temporary directory using create_dir, so the
+/// directory name cannot be pre-created by another local user.
+fn secure_temp_dir(label: &str) -> Result<String, String> {
+    fs::create_dir_all(PRIV_TMP_DIR)
+        .map_err(|e| format!("Failed to create private temp directory: {e}"))?;
+    fs::set_permissions(PRIV_TMP_DIR, fs::Permissions::from_mode(0o700))
+        .map_err(|e| format!("Failed to secure private temp directory: {e}"))?;
+    let safe_label: String = label
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { '_' })
+        .collect();
+    for attempt in 0..32u32 {
+        let nonce = format!(
+            "{}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| format!("Clock error: {e}"))?
+                .as_nanos(),
+            attempt
+        );
+        let path = format!("{PRIV_TMP_DIR}/{nonce}-{safe_label}");
+        match fs::create_dir(&path) {
+            Ok(()) => {
+                fs::set_permissions(&path, fs::Permissions::from_mode(0o700))
+                    .map_err(|e| format!("Failed to secure temporary directory: {e}"))?;
+                return Ok(path);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(format!("Failed to create secure temporary directory: {e}")),
+        }
+    }
+    Err("Unable to allocate a unique secure temporary directory".to_string())
+}
+
 const CUSTOM_RULES_FILE: &str = "/usr/local/etc/ntpsense/firewall-custom-rules.json";
 const LIMITERS_FILE: &str = "/usr/local/etc/ntpsense/bandwidth-limiters.json";
 const DNCTL_CONF: &str = "/etc/dnctl.conf";
@@ -6980,7 +7015,7 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
                 }
                 let new_content = new_lines.join("\n") + "\n";
 
-                let tmp_path = "/etc/ntp.conf.new";
+                let tmp_path = secure_temp_file("ntp.conf.new")?;
                 if fs::write(tmp_path, &new_content).is_err()
                     || fs::rename(tmp_path, "/etc/ntp.conf").is_err()
                 {
@@ -7670,7 +7705,7 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
         // salah-terap.
         "system.backup_create" => {
             let _ = fs::create_dir_all(BACKUP_DIR);
-            let staging_dir = "/tmp/ntpsense-backup-staging";
+            let staging_dir = secure_temp_dir("backup-staging")?;
             let _ = fs::remove_dir_all(staging_dir);
             fs::create_dir_all(staging_dir).map_err(|e| ("INTERNAL_ERROR".to_string(), format!("Failed to create staging dir: {e}")))?;
 
@@ -9201,7 +9236,7 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
             // 3. Ekstrak ke staging dulu (BUKAN langsung ke lokasi
             // final) - supaya bisa scan interface yang direferensikan
             // SEBELUM benar-benar menimpa config yang sedang berjalan.
-            let staging_dir = "/tmp/ntpsense-restore-staging";
+            let staging_dir = secure_temp_dir("restore-staging")?;
             let _ = fs::remove_dir_all(staging_dir);
             fs::create_dir_all(staging_dir).map_err(|e| ("INTERNAL_ERROR".to_string(), format!("Failed to create staging dir: {e}")))?;
             let extract_status = Command::new("tar").arg("-xzf").arg(&archive_path).arg("-C").arg(staging_dir).status();
