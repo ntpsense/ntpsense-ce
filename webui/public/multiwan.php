@@ -298,6 +298,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 <summary style="cursor:pointer; display:inline-block; color:#374151; font-size:12px;">Edit</summary>
                 <form method="post" style="margin:8px 0 0; display:flex; gap:8px; align-items:end; flex-wrap:wrap;">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
                   <input type="hidden" name="form" value="gateway_update">
                   <input type="hidden" name="name" value="<?= htmlspecialchars($g['name']) ?>">
                   <div>
@@ -324,6 +325,7 @@ require __DIR__ . '/../templates/layout_header.php';
                 </form>
               </details>
               <form method="post" style="margin:0; display:inline-block;" onsubmit="return confirm('Delete gateway &quot;<?= htmlspecialchars($g['name']) ?>
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>&quot;?');">
                 <input type="hidden" name="form" value="gateway_delete">
                 <input type="hidden" name="name" value="<?= htmlspecialchars($g['name']) ?>">
@@ -357,6 +359,7 @@ require __DIR__ . '/../templates/layout_header.php';
       </p>
     <?php else: ?>
       <form method="post" style="padding:14px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="gateway_create">
         <div>
@@ -446,6 +449,7 @@ require __DIR__ . '/../templates/layout_header.php';
           <?php $rowsId = 'edit-member-rows-' . preg_replace('/[^a-zA-Z0-9_]/', '-', $grp['name']); ?>
           <form method="post" style="margin:10px 0 0;">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="group_update">
             <input type="hidden" name="name" value="<?= htmlspecialchars($grp['name']) ?>">
             <input type="hidden" name="routing_mode" value="<?= htmlspecialchars($grp['routing_mode'] ?? 'static') ?>">
@@ -476,11 +480,13 @@ require __DIR__ . '/../templates/layout_header.php';
         <?php if ($grp['is_system_default']): ?>
           <form method="post" style="margin:0;">
 <?= Auth::csrfField() ?>
+<?= Auth::csrfField() ?>
             <input type="hidden" name="form" value="group_clear_default">
             <button type="submit" style="background:none; border:1px solid #d1d5db; padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;">Unset as System Default</button>
           </form>
         <?php else: ?>
           <form method="post" style="margin:0;" onsubmit="return confirm('Set &quot;<?= htmlspecialchars($grp['name']) ?>
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>&quot; as the System Default Gateway? This controls where NTPSense\'s own traffic exits.');">
             <input type="hidden" name="form" value="group_set_default">
             <input type="hidden" name="name" value="<?= htmlspecialchars($grp['name']) ?>">
@@ -488,6 +494,7 @@ require __DIR__ . '/../templates/layout_header.php';
           </form>
         <?php endif; ?>
         <form method="post" style="margin:0;" onsubmit="return confirm('Delete group &quot;<?= htmlspecialchars($grp['name']) ?>
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>&quot;?');">
           <input type="hidden" name="form" value="group_delete">
           <input type="hidden" name="name" value="<?= htmlspecialchars($grp['name']) ?>">
@@ -503,6 +510,7 @@ require __DIR__ . '/../templates/layout_header.php';
       <p style="padding:12px 14px; font-size:12px; color:#6b7280;">Add at least one gateway on the Gateways tab first.</p>
     <?php else: ?>
       <form method="post" style="padding:14px;">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
         <input type="hidden" name="form" value="group_create">
         <div style="margin-bottom:12px;">
@@ -617,6 +625,7 @@ require __DIR__ . '/../templates/layout_header.php';
       not per-gateway. Takes effect on the next monitoring cycle automatically, no daemon restart needed.
     </p>
     <form method="post" style="padding:14px; display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+<?= Auth::csrfField() ?>
 <?= Auth::csrfField() ?>
       <input type="hidden" name="form" value="settings_update">
       <div>
