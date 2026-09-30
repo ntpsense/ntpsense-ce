@@ -66,7 +66,6 @@ final class Auth
     private const LOCKOUT_THRESHOLD = 5;
     private const LOCKOUT_SECONDS = 900; // 15 menit
     private const DEFAULT_USERNAME = 'admin';
-    private const DEFAULT_PASSWORD = 'admin';
     // "Administrator" TIDAK PERNAH disimpan sebagai objek role di file -
     // ini nama cadangan (reserved), diperlakukan sebagai kasus khusus di
     // seluruh kode: akses penuh ke SEMUA kategori TERMASUK 'system',
@@ -165,7 +164,7 @@ final class Auth
             );
         }
     }
-    public static function ensureBootstrapped(): void
+    public static function ensureBootstrapped(?string $bootstrapPassword = null): void
     {
         if (file_exists(self::CREDENTIAL_FILE)) {
             self::migrateIfNeeded();
@@ -175,11 +174,21 @@ final class Auth
         if (!is_dir($dir)) {
             mkdir($dir, 0750, true);
         }
+        $bootstrapPassword ??= (string) getenv('NTPSENSE_BOOTSTRAP_PASSWORD');
+        if ($bootstrapPassword === '') {
+            throw new RuntimeException(
+                'Initial administrator bootstrap password is required. Set NTPSENSE_BOOTSTRAP_PASSWORD or pass it explicitly.'
+            );
+        }
+        if (strlen($bootstrapPassword) < 20) {
+            throw new InvalidArgumentException('Initial administrator bootstrap password must be at least 20 characters.');
+        }
+
         $data = [
             'users' => [
                 [
                     'username' => self::DEFAULT_USERNAME,
-                    'password_hash' => password_hash(self::DEFAULT_PASSWORD, PASSWORD_DEFAULT),
+                    'password_hash' => password_hash($bootstrapPassword, PASSWORD_DEFAULT),
                     'must_change_password' => true,
                     'created_at' => time(),
                     'role' => self::ADMINISTRATOR_ROLE,
