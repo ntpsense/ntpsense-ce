@@ -1802,7 +1802,7 @@ fn sync_wireguard_pf_rule() -> Result<(), String> {
     let insert_at = idx + anchor.len();
     let new_content = format!("{}\n{WG_PF_START_MARKER}\n{WG_PF_END_MARKER}\n\n{}", &content[..insert_at], &content[insert_at..]);
 
-    let tmp_path = "/tmp/pf.conf.wireguard_new";
+    let tmp_path = secure_temp_file("pf.conf.wireguard_new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
     let status = Command::new("pfctl").arg("-nf").arg(tmp_path).status().map_err(|e| format!("Failed to run pfctl -nf: {e}"))?;
     if !status.success() {
@@ -2280,7 +2280,7 @@ fn ensure_ipsec_pf_marker() -> Result<(), String> {
     let insert_at = idx + anchor.len();
     let new_content = format!("{}\n{IPSEC_PF_START_MARKER}\n{IPSEC_PF_END_MARKER}\n\n{}", &content[..insert_at], &content[insert_at..]);
 
-    let tmp_path = "/tmp/pf.conf.ipsec_new";
+    let tmp_path = secure_temp_file("pf.conf.ipsec_new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
     let status = Command::new("pfctl").arg("-nf").arg(tmp_path).status().map_err(|e| format!("Failed to run pfctl -nf: {e}"))?;
     if !status.success() {
@@ -2931,7 +2931,7 @@ fn splice_lagg_marker(members: &[String], lagg_name: &str) -> Result<(), String>
     let new_content = lines.join("\n") + "\n";
 
     // Validasi WAJIB sebelum tulis - draft ke file temp dulu.
-    let tmp_path = "/tmp/pf.conf.lagg-new";
+    let tmp_path = secure_temp_file("pf.conf.lagg-new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft pf.conf: {e}"))?;
     let check = Command::new("pfctl").args(["-nf", tmp_path]).output();
     match check {
@@ -3011,7 +3011,7 @@ fn lagg_delete(lagg_name: &str) -> Result<(), String> {
             new_lines.push(line.to_string());
         }
         let new_content = new_lines.join("\n") + "\n";
-        let tmp_path = "/tmp/pf.conf.lagg-delete";
+        let tmp_path = secure_temp_file("pf.conf.lagg-delete")?;
         if fs::write(tmp_path, &new_content).is_ok() {
             if let Ok(o) = Command::new("pfctl").args(["-nf", tmp_path]).output() {
                 if o.status.success() {
@@ -3147,7 +3147,7 @@ fn lagg_edit(lagg_name: &str, new_members: &[String], new_protocol: &str) -> Res
                 new_lines.push(line.to_string());
             }
             let new_content = new_lines.join("\n") + "\n";
-            let tmp_path = "/tmp/pf.conf.lagg-edit";
+            let tmp_path = secure_temp_file("pf.conf.lagg-edit")?;
             if fs::write(tmp_path, &new_content).is_ok() {
                 if let Ok(o) = Command::new("pfctl").args(["-nf", tmp_path]).output() {
                     if o.status.success() {
@@ -3187,7 +3187,7 @@ fn lagg_edit(lagg_name: &str, new_members: &[String], new_protocol: &str) -> Res
                 })
                 .collect();
             let new_content = lines.join("\n") + "\n";
-            let tmp_path = "/tmp/pf.conf.lagg-edit-add";
+            let tmp_path = secure_temp_file("pf.conf.lagg-edit-add")?;
             if fs::write(tmp_path, &new_content).is_ok() {
                 if let Ok(o) = Command::new("pfctl").args(["-nf", tmp_path]).output() {
                     if o.status.success() {
@@ -3372,7 +3372,7 @@ fn ensure_pf_marker_for_interface(iface: &str) -> Result<(), String> {
     let insert_at = idx + anchor.len();
     let new_content = format!("{}\n{start_marker}\n{end_marker}\n\n{}", &content[..insert_at], &content[insert_at..]);
 
-    let tmp_path = "/tmp/pf.conf.vlan-new";
+    let tmp_path = secure_temp_file("pf.conf.vlan-new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
     let status = Command::new("pfctl").arg("-nf").arg(tmp_path).status().map_err(|e| format!("Failed to run pfctl -nf: {e}"))?;
     if !status.success() {
@@ -3405,7 +3405,7 @@ fn remove_pf_marker_for_interface(iface: &str) -> Result<(), String> {
         lines.push(line);
     }
     let new_content = lines.join("\n") + "\n";
-    let tmp_path = "/tmp/pf.conf.vlan-delete";
+    let tmp_path = secure_temp_file("pf.conf.vlan-delete")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
     let status = Command::new("pfctl").arg("-nf").arg(tmp_path).status().map_err(|e| format!("Failed to run pfctl -nf: {e}"))?;
     if !status.success() {
@@ -5272,7 +5272,7 @@ fn ensure_floating_pf_marker() -> Result<(), String> {
         &content[..insert_at],
         &content[insert_at..]
     );
-    let tmp_path = "/tmp/pf.conf.floating_marker_new";
+    let tmp_path = secure_temp_file("pf.conf.floating_marker_new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
     let status = Command::new("pfctl").arg("-nf").arg(tmp_path).status().map_err(|e| format!("Failed to run pfctl -nf: {e}"))?;
     if !status.success() {
@@ -5311,7 +5311,7 @@ fn regenerate_floating_rules() -> Result<(), String> {
     middle.push('\n');
 
     let new_content = format!("{before}{middle}{after}");
-    let tmp_path = "/tmp/pf.conf.floating_new";
+    let tmp_path = secure_temp_file("pf.conf.floating_new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
     let status = Command::new("pfctl").arg("-nf").arg(tmp_path).status().map_err(|e| format!("Failed to run pfctl -nf: {e}"))?;
     if !status.success() {
@@ -5406,7 +5406,7 @@ fn regenerate_pf_conf_for_interface(interface: &str, rules_for_iface: &[CustomRu
         new_content = format!("{nat_before}{nat_middle}{nat_after}");
     }
 
-    let tmp_path = "/tmp/pf.conf.custom_new";
+    let tmp_path = secure_temp_file("pf.conf.custom_new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
 
     let status = Command::new("pfctl")
@@ -5455,7 +5455,7 @@ fn update_pf_conf_macro(macro_name: &str, new_value: &str) -> Result<(), String>
     }
 
     let new_content = new_lines.join("\n") + "\n";
-    let tmp_path = "/tmp/pf.conf.macro_new";
+    let tmp_path = secure_temp_file("pf.conf.macro_new")?;
     fs::write(tmp_path, &new_content).map_err(|e| format!("Failed to write draft: {e}"))?;
 
     let status = Command::new("pfctl")
@@ -7527,8 +7527,8 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
                 let _ = fs::copy(SSL_KEY_PATH, format!("{SSL_BACKUP_DIR}/webui-{ts}.key"));
             }
 
-            let tmp_key = "/tmp/ntpsense-cert-regen.key";
-            let tmp_crt = "/tmp/ntpsense-cert-regen.crt";
+            let tmp_key = secure_temp_file("ntpsense-cert-regen.key")?;
+            let tmp_crt = secure_temp_file("ntpsense-cert-regen.crt")?;
             let gen_status = Command::new("openssl")
                 .args([
                     "req", "-x509", "-nodes", "-days", "3650", "-newkey", "rsa:2048",
@@ -7580,8 +7580,8 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
                 return Err(("INVALID_PARAMS".to_string(), "Both certificate and private key PEM content are required".to_string()));
             }
 
-            let tmp_crt = "/tmp/ntpsense-cert-upload.crt";
-            let tmp_key = "/tmp/ntpsense-cert-upload.key";
+            let tmp_crt = secure_temp_file("ntpsense-cert-upload.crt")?;
+            let tmp_key = secure_temp_file("ntpsense-cert-upload.key")?;
             if fs::write(tmp_crt, &cert_pem).is_err() || fs::write(tmp_key, &key_pem).is_err() {
                 return Err(("INTERNAL_ERROR".to_string(), "Failed to write uploaded certificate to a temp file".to_string()));
             }
@@ -7689,7 +7689,7 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
                 return Err(("INTERNAL_ERROR".to_string(), "No configuration files were found to back up".to_string()));
             }
 
-            let tmp_archive = "/tmp/ntpsense-backup-unsigned.tar.gz";
+            let tmp_archive = secure_temp_file("ntpsense-backup-unsigned.tar.gz")?;
             let mut tar_args = vec!["-czf".to_string(), tmp_archive.to_string(), "-C".to_string(), staging_dir.to_string()];
             tar_args.extend(included.iter().map(|s| s.to_string()));
             let tar_status = Command::new("tar").args(&tar_args).status();
@@ -8053,7 +8053,7 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
             cfg.cache_size_mb = cache_size_mb;
             let conf_text = proxy::generate_squid_conf(&cfg).map_err(|e| ("INTERNAL_ERROR".to_string(), e))?;
 
-            let tmp_path = "/tmp/squid.conf.new";
+            let tmp_path = secure_temp_file("squid.conf.new")?;
             fs::write(tmp_path, &conf_text).map_err(|e| ("INTERNAL_ERROR".to_string(), format!("Failed to write draft: {e}")))?;
 
             let parse_status = Command::new("/usr/local/sbin/squid").arg("-k").arg("parse").arg("-f").arg(tmp_path).output();
@@ -8159,7 +8159,7 @@ fn handle_action(action: &str, params: &serde_json::Value) -> Result<serde_json:
 
             let proxy_cfg = proxy::load_proxy_config();
             let conf_text = proxy::generate_squid_conf(&proxy_cfg).map_err(|e| ("INTERNAL_ERROR".to_string(), e))?;
-            let tmp_path = "/tmp/squid.conf.new";
+            let tmp_path = secure_temp_file("squid.conf.new")?;
             fs::write(tmp_path, &conf_text).map_err(|e| ("INTERNAL_ERROR".to_string(), format!("Failed to write draft: {e}")))?;
 
             let parse_status = Command::new("/usr/local/sbin/squid").arg("-k").arg("parse").arg("-f").arg(tmp_path).output();
