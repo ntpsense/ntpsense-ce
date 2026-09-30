@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-session_start();
 require __DIR__ . '/../lib/Auth.php';
+Auth::startSession();
+Auth::requireCsrf();
 require_once __DIR__ . '/../lib/NtpsenseConfigd.php';
 // ExternalAuth.php SUDAH ter-include lewat Auth.php sendiri (require_once
 // di dalamnya) - baris require terpisah di sini yang SEBELUMNYA ada
