@@ -56,6 +56,47 @@ use std::thread;
 const SOCKET_PATH: &str = "/var/run/ntpsense-configd.sock";
 const MGMT_LOCK_FILE: &str = "/usr/local/etc/ntpsense/mgmt-interface.lock";
 const ALLOWED_GROUP: &str = "ntpsenseweb";
+const PRIV_TMP_DIR: &str = "/var/run/ntpsense-configd/tmp";
+
+/// Create a root-private, race-resistant temporary file path.
+///
+/// The file is created with O_CREAT|O_EXCL before returning, so a local
+/// attacker cannot pre-create or replace the chosen pathname with a symlink.
+fn secure_temp_file(label: &str) -> Result<String, String> {
+    fs::create_dir_all(PRIV_TMP_DIR)
+        .map_err(|e| format!("Failed to create private temp directory: {e}"))?;
+    fs::set_permissions(PRIV_TMP_DIR, fs::Permissions::from_mode(0o700))
+        .map_err(|e| format!("Failed to secure private temp directory: {e}"))?;
+
+    let safe_label: String = label
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { '_' })
+        .collect();
+    for attempt in 0..32u32 {
+        let nonce = format!(
+            "{}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| format!("Clock error: {e}"))?
+                .as_nanos(),
+            attempt
+        );
+        let path = format!("{PRIV_TMP_DIR}/{nonce}-{safe_label}");
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&path)
+        {
+            Ok(_) => return Ok(path),
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(format!("Failed to create secure temporary file: {e}")),
+        }
+    }
+    Err("Unable to allocate a unique secure temporary file".to_string())
+}
+
 const CUSTOM_RULES_FILE: &str = "/usr/local/etc/ntpsense/firewall-custom-rules.json";
 const LIMITERS_FILE: &str = "/usr/local/etc/ntpsense/bandwidth-limiters.json";
 const DNCTL_CONF: &str = "/etc/dnctl.conf";
