@@ -42,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
     <form method="post">
 <?= Auth::csrfField() ?>
-<?= Auth::csrfField() ?>
       <div class="ntp-field">
         <label for="new_password">New password</label>
         <input type="password" id="new_password" name="new_password" required minlength="8" autofocus>
