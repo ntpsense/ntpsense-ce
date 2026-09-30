@@ -131,7 +131,8 @@ require __DIR__ . '/../templates/layout_header.php';
           <td><?= htmlspecialchars($version) ?></td>
           <td><span class="ntp-badge ntp-badge-success">Installed</span></td>
           <td>
-            <form method="post" style="margin:0;" onsubmit="ntpPkgOperation(event, 'uninstall', '<?= htmlspecialchars($name, ENT_QUOTES) ?>', '<?= htmlspecialchars(PackageCatalog::displayName($name), ENT_QUOTES) ?>'); return false;">
+            <form method="post" style="margin:0;" onsubmit="ntpPkgOperation(event, 'uninstall', '<?= htmlspecialchars($name, ENT_QUOTES) ?>
+<?= Auth::csrfField() ?>', '<?= htmlspecialchars(PackageCatalog::displayName($name), ENT_QUOTES) ?>'); return false;">
               <input type="hidden" name="form" value="uninstall">
               <input type="hidden" name="name" value="<?= htmlspecialchars($name) ?>">
               <button type="submit" style="font-size:12px; padding:4px 10px; color:#b3261e;">Uninstall</button>
@@ -154,7 +155,8 @@ require __DIR__ . '/../templates/layout_header.php';
           <p style="font-size:12px; color:#6b7280; margin:2px 0 0;"><?= htmlspecialchars($meta['description']) ?></p>
         </div>
         <span class="ntp-badge ntp-badge-muted"><?= htmlspecialchars($meta['category']) ?></span>
-        <form method="post" style="margin:0;" onsubmit="ntpPkgOperation(event, 'install', '<?= htmlspecialchars($name, ENT_QUOTES) ?>', '<?= htmlspecialchars(PackageCatalog::displayName($name), ENT_QUOTES) ?>'); return false;">
+        <form method="post" style="margin:0;" onsubmit="ntpPkgOperation(event, 'install', '<?= htmlspecialchars($name, ENT_QUOTES) ?>
+<?= Auth::csrfField() ?>', '<?= htmlspecialchars(PackageCatalog::displayName($name), ENT_QUOTES) ?>'); return false;">
           <input type="hidden" name="form" value="install">
           <input type="hidden" name="name" value="<?= htmlspecialchars($name) ?>">
           <button type="submit" style="font-size:12px; padding:6px 16px; background:#14213d; color:#ffffff; border:none; border-radius:6px;">Install</button>
