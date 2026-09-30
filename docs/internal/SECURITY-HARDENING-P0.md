@@ -103,7 +103,24 @@ All identified `saveAll()` mutation boundaries are covered, including external-u
 
 Runtime concurrency testing is still required before SEC-03 can be marked PASS.
 
-## SEC-04 next
+## SEC-04 status — IMPLEMENTED; RUNTIME VALIDATION PENDING
+Privileged daemon temporary artifacts now use a root-private directory:
+`/var/run/ntpsense-configd/tmp`.
+
+The implementation:
+- creates the private directory with mode 0700;
+- allocates file names using `O_CREAT|O_EXCL` / `create_new`;
+- uses mode 0600 for temporary files;
+- sanitizes labels used in generated names;
+- creates unique staging directories with `create_dir`;
+- migrates PF drafts, certificate material, NTP draft, backup archive, Squid configuration, and backup/restore staging;
+- retains explicit cleanup at existing call sites where present.
+
+The remaining `/tmp` references in the daemon are documentation/input-boundary references, not privileged output destinations.
+
+Runtime validation must verify ownership/mode, symlink resistance, cleanup, and concurrent operations on FreeBSD.
+
+
 Inventory all predictable `/tmp` paths in the Rust daemon. Use exclusive random temp files/private staging directories and configuration transaction locking.
 
 ## Deep Audit Pass #2
@@ -133,5 +150,5 @@ Keep known-good snapshots such as `baseline-main`, `p0-sec01-before`, and `p0-se
 | FreeBSD validation | PENDING |
 | SEC-02 | NEXT |
 | SEC-03 | IMPLEMENTED — FreeBSD concurrency validation pending |
-| SEC-04 | PENDING |
+| SEC-04 | IMPLEMENTED — FreeBSD runtime validation pending |
 | Deep Audit Pass #2 | PENDING |
