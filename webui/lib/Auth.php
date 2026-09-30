@@ -300,16 +300,63 @@ final class Auth
         ];
     }
     /**
+     * Write JSON state atomically in the same directory as the target.
+     * This prevents readers from observing a partially-written file after
+     * crashes or interrupted writes. Transaction locking around the
+     * read-modify-write sequence is handled separately by mutation callers.
+     *
+     * @param array<string, mixed> $data
+     */
+    private static function atomicWriteJson(string $path, array $data, int $mode = 0640): void
+    {
+        $dir = dirname($path);
+        if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
+            throw new RuntimeException("Unable to create state directory: {$dir}");
+        }
+
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+        $tmp = tempnam($dir, '.ntpsense-state-');
+        if ($tmp === false) {
+            throw new RuntimeException("Unable to create temporary state file in {$dir}");
+        }
+
+        try {
+            $fp = fopen($tmp, 'wb');
+            if ($fp === false) {
+                throw new RuntimeException("Unable to open temporary state file: {$tmp}");
+            }
+            try {
+                if (fwrite($fp, $json . PHP_EOL) === false || !fflush($fp)) {
+                    throw new RuntimeException("Unable to write state file: {$tmp}");
+                }
+                if (function_exists('fsync')) {
+                    fsync($fp);
+                }
+            } finally {
+                fclose($fp);
+            }
+            chmod($tmp, $mode);
+            if (!rename($tmp, $path)) {
+                throw new RuntimeException("Unable to atomically replace state file: {$path}");
+            }
+        } finally {
+            if (is_file($tmp)) {
+                @unlink($tmp);
+            }
+        }
+        chmod($path, $mode);
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $users
      * @param array<int, array<string, mixed>> $roles
      */
     private static function saveAll(array $users, array $roles): void
     {
-        file_put_contents(self::CREDENTIAL_FILE, json_encode([
+        self::atomicWriteJson(self::CREDENTIAL_FILE, [
             'users' => array_values($users),
             'roles' => array_values($roles),
-        ], JSON_PRETTY_PRINT));
-        chmod(self::CREDENTIAL_FILE, 0640);
+        ]);
     }
     /** @return array<string, array{count:int, locked_until:int}> */
     private static function loadLockoutState(): array
@@ -327,8 +374,7 @@ final class Auth
         if (!is_dir($dir)) {
             mkdir($dir, 0750, true);
         }
-        file_put_contents(self::LOCKOUT_FILE, json_encode($state));
-        chmod(self::LOCKOUT_FILE, 0640);
+        self::atomicWriteJson(self::LOCKOUT_FILE, $state);
     }
     /**
      * Cek dua kunci independen (username DAN IP sumber, pola Palo Alto)
